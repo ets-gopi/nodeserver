@@ -9,7 +9,10 @@ const { roomValidation ,updateRoomValidation} = require("../middleware/room.vali
 
 
 router.get("/",verifyAccessToken,roomInfo.getAllRooms);
-router.get("/:roomId",verifyAccessToken,roomInfo.getRoomById);
+router.get("/room/:roomId",verifyAccessToken,roomInfo.getRoomById);
+
+router.get("/property/:propertyId",verifyAccessToken,roomInfo.getRoomByPropertyId);
+
 
 // router.get("/",verifyAccessToken,checkUser,roomInfo.getRoomsByUserId);
 // router.get("/:userId/:roomId",verifyAccessToken,checkUser,roomInfo.getRoomByUserIdByRoomId);

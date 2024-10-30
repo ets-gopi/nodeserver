@@ -76,7 +76,7 @@ const updateRoomByPropertyIdByRoomId=async(req,res,next)=>{
     }
 }
 
-//delete an property by id.
+
 const deleteRoomByPropertyIdByRoomId=async(req,res,next)=>{
     const {propertyId,roomId}=req.params;
     try {
@@ -121,7 +121,132 @@ const deleteRoomByPropertyIdByRoomId=async(req,res,next)=>{
     }
 }
 
-// get an property by id.
+
+const getAllRooms=async(req,res,next)=>{
+    let roomsArray=[];
+    try {
+        const allRooms=await roomModel.find({});
+        if(allRooms.length>0){
+            roomsArray=allRooms.map((room,ind)=>{
+                const {id,name,description,roomType,BedType,maxOccupancy,numberOfBeds,pricePerNight,isAvailable,images,thumbnailImage,amenities,quantityAvailable}=room;
+                return {
+                    id,name,description,roomType,BedType,maxOccupancy,numberOfBeds,pricePerNight,isAvailable,images,thumbnailImage,amenities,quantityAvailable
+                }
+            })
+            
+        }
+        
+        res.json({
+            status:true,
+            bcc:200,
+            message:`All Rooms are fetched Successfully.`,
+            data:roomsArray
+        })
+    } catch (error) {
+        console.error(error);
+        
+        if(error instanceof HttpError){
+            res.json({
+                status:false,
+                bcc:error.statusCode,
+                message:error.message,
+            })
+        }else{
+            res.json({
+                status:false,
+                bcc:500,
+                message:"Internal server Issuse.",
+            }) 
+        }
+    }
+
+}
+
+
+const getRoomById=async(req,res,next)=>{
+    const {roomId}=req.params;
+    let roomObj={};
+    try {
+        const Roomdoc=await roomModel.findOne({_id:roomId});
+        if(!Roomdoc){
+           throw createError("room dose not exit",404) 
+        }
+        roomObj=Roomdoc.toObject();
+        const {name,description,roomType,BedType,maxOccupancy,numberOfBeds,pricePerNight,isAvailable,images,thumbnailImage,amenities,quantityAvailable}=roomObj;
+        res.json({
+            status:true,
+            bcc:200,
+            message:`Room data  fetched Successfully.`,
+            data:{name,description,roomType,BedType,maxOccupancy,numberOfBeds,pricePerNight,isAvailable,images,thumbnailImage,amenities,quantityAvailable}
+        })
+    } catch (error) {
+        console.error(error);
+        
+        if(error instanceof HttpError){
+            res.json({
+                status:false,
+                bcc:error.statusCode,
+                message:error.message,
+            })
+        }else if(error instanceof mongoose.Error.CastError){
+            res.json({
+                status:false,
+                bcc:400,
+                message:error.message,
+            }) 
+
+        }else{
+            res.json({
+                status:false,
+                bcc:500,
+                message:"Internal server Issuse.",
+            }) 
+        }
+    }
+
+};
+
+const getRoomByPropertyId=async(req,res,next)=>{
+    const {propertyId}=req.params;
+    try {
+        const Roomsdoc=await roomModel.find({propertyId});
+        if(Roomsdoc.length===0){
+           throw createError("rooms dose not exit",404); 
+        }
+        res.json({
+            status:true,
+            bcc:200,
+            message:`Rooms data  fetched Successfully.`,
+            data:Roomsdoc
+        })
+    } catch (error) {
+        console.error(error);
+        
+        if(error instanceof HttpError){
+            res.json({
+                status:false,
+                bcc:error.statusCode,
+                message:error.message,
+            })
+        }else if(error instanceof mongoose.Error.CastError){
+            res.json({
+                status:false,
+                bcc:400,
+                message:error.message,
+            }) 
+
+        }else{
+            res.json({
+                status:false,
+                bcc:500,
+                message:"Internal server Issuse.",
+            }) 
+        }
+    }
+
+};
+
+
 const getRoomsByUserId=async(req,res,next)=>{
     try {
         const propertyRooms=await roomModel.find({userId:req.payload.id});
@@ -161,7 +286,6 @@ const getRoomsByUserId=async(req,res,next)=>{
 
 }
 
-// get an property by id.
 const getRoomByUserIdByRoomId=async(req,res,next)=>{
     const {userId,roomId}=req.params;
     try {
@@ -207,91 +331,9 @@ const getRoomByUserIdByRoomId=async(req,res,next)=>{
 }
 
 
-// get all properties.
-const getAllRooms=async(req,res,next)=>{
-    let roomsArray=[];
-    try {
-        const allRooms=await roomModel.find({});
-        if(allRooms.length>0){
-            roomsArray=allRooms.map((room,ind)=>{
-                const {id,name,description,roomType,BedType,maxOccupancy,numberOfBeds,pricePerNight,isAvailable,images,thumbnailImage,amenities,quantityAvailable}=room;
-                return {
-                    id,name,description,roomType,BedType,maxOccupancy,numberOfBeds,pricePerNight,isAvailable,images,thumbnailImage,amenities,quantityAvailable
-                }
-            })
-            
-        }
-        
-        res.json({
-            status:true,
-            bcc:200,
-            message:`All Rooms are fetched Successfully.`,
-            data:roomsArray
-        })
-    } catch (error) {
-        console.error(error);
-        
-        if(error instanceof HttpError){
-            res.json({
-                status:false,
-                bcc:error.statusCode,
-                message:error.message,
-            })
-        }else{
-            res.json({
-                status:false,
-                bcc:500,
-                message:"Internal server Issuse.",
-            }) 
-        }
-    }
 
-}
 
-// get all properties.
-const getRoomById=async(req,res,next)=>{
-    const {roomId}=req.params;
-    let roomObj={};
-    try {
-        const Roomdoc=await roomModel.findById(roomId);
-        if(!Roomdoc){
-           throw createError("room dose not exit",404) 
-        }
-        roomObj=Roomdoc.toObject();
-        const {name,description,roomType,BedType,maxOccupancy,numberOfBeds,pricePerNight,isAvailable,images,thumbnailImage,amenities,quantityAvailable}=roomObj;
-        res.json({
-            status:true,
-            bcc:200,
-            message:`Room data  fetched Successfully.`,
-            data:{name,description,roomType,BedType,maxOccupancy,numberOfBeds,pricePerNight,isAvailable,images,thumbnailImage,amenities,quantityAvailable}
-        })
-    } catch (error) {
-        console.error(error);
-        
-        if(error instanceof HttpError){
-            res.json({
-                status:false,
-                bcc:error.statusCode,
-                message:error.message,
-            })
-        }else if(error instanceof mongoose.Error.CastError){
-            res.json({
-                status:false,
-                bcc:400,
-                message:error.message,
-            }) 
 
-        }else{
-            res.json({
-                status:false,
-                bcc:500,
-                message:"Internal server Issuse.",
-            }) 
-        }
-    }
-
-}
-
-const roomInfo={createRoomByPropertyId,updateRoomByPropertyIdByRoomId,deleteRoomByPropertyIdByRoomId,getAllRooms,getRoomsByUserId,getRoomByUserIdByRoomId,getRoomById};
+const roomInfo={createRoomByPropertyId,updateRoomByPropertyIdByRoomId,deleteRoomByPropertyIdByRoomId,getAllRooms,getRoomsByUserId,getRoomByUserIdByRoomId,getRoomById,getRoomByPropertyId};
 
 module.exports=roomInfo;

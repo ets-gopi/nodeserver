@@ -53,4 +53,4 @@ userSchema.methods.verifyPassword=async function(password){
 
 const userModel=mongoose.model('User',userSchema);
 
-module.exports=userModel;
+module.exports={userModel,mongoose};
