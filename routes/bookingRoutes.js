@@ -5,4 +5,5 @@ const bookingValidation = require("../middleware/booking.validation.middleware")
 const bookingInfo = require("../controllers/booking.controller");
 
 router.post("/property/:propertyId/create-booking",verifyAccessToken,bookingValidation,bookingInfo.createBooking);
+router.get("/booking-testing",bookingInfo.testing);
 module.exports=router;

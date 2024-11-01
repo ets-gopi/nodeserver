@@ -1,0 +1,264 @@
+[
+    {
+      "bookingId": 12345,
+      "userId": "650c7859ab1cfc45d3e8c9b4",
+      "propertyId": "650d53c1a7dfc56e1f0b8bc3",
+      "checkIn": "2024-11-10T14:00:00.000Z",
+      "checkOut": "2024-11-15T12:00:00.000Z",
+      "numberOfGuests": 4,
+      "couponCode": "DISCOUNT10",
+      "customerInfo": {
+        "name": "John Doe",
+        "email": "johndoe@example.com"
+      },
+      "billingInfo": {
+        "totalAmount": 5000,
+        "discount": 500,
+        "gstInfo": {
+          "rate": 18,
+          "amount": 810,
+          "sgst": 405,
+          "cgst": 405
+        },
+        "paymentStatus": "Paid"
+      },
+      "bookingStatus": "Confirmed",
+      "roomInfo": [
+        {
+          "roomId": "651fcd479a96a601fceddf8b",
+          "roomPrice": 1500,
+          "roomQuantity": 2
+        },
+        {
+          "roomId": "651fcd4869bf9e76c32a40f9",
+          "roomPrice": 2000,
+          "roomQuantity": 1
+        }
+      ]
+    },
+    {
+      "bookingId": 12346,
+      "userId": "650c7859ab1cfc45d3e8c9b4",
+      "propertyId": "650d53c1a7dfc56e1f0b8bc3",
+      "checkIn": "2024-12-01T14:00:00.000Z",
+      "checkOut": "2024-12-07T12:00:00.000Z",
+      "numberOfGuests": 3,
+      "couponCode": "WINTERDEAL",
+      "customerInfo": {
+        "name": "John Doe",
+        "email": "johndoe@example.com"
+      },
+      "billingInfo": {
+        "totalAmount": 4500,
+        "discount": 400,
+        "gstInfo": {
+          "rate": 18,
+          "amount": 738,
+          "sgst": 369,
+          "cgst": 369
+        },
+        "paymentStatus": "Pending"
+      },
+      "bookingStatus": "Pending",
+      "roomInfo": [
+        {
+          "roomId": "651fcd489a96a601fceddf8d",
+          "roomPrice": 1500,
+          "roomQuantity": 3
+        }
+      ]
+    },
+    {
+      "bookingId": 12347,
+      "userId": "650c7859ab1cfc45d3e8c9b4",
+      "propertyId": "650d53c1a7dfc56e1f0b8bc3",
+      "checkIn": "2024-12-15T14:00:00.000Z",
+      "checkOut": "2024-12-18T12:00:00.000Z",
+      "numberOfGuests": 2,
+      "couponCode": "FESTIVE50",
+      "customerInfo": {
+        "name": "John Doe",
+        "email": "johndoe@example.com"
+      },
+      "billingInfo": {
+        "totalAmount": 3000,
+        "discount": 500,
+        "gstInfo": {
+          "rate": 18,
+          "amount": 450,
+          "sgst": 225,
+          "cgst": 225
+        },
+        "paymentStatus": "Paid"
+      },
+      "bookingStatus": "Confirmed",
+      "roomInfo": [
+        {
+          "roomId": "651fcd479a96a601fceddf8e",
+          "roomPrice": 1500,
+          "roomQuantity": 2
+        }
+      ]
+    },
+    {
+      "bookingId": 12348,
+      "userId": "650c7859ab1cfc45d3e8c9b4",
+      "propertyId": "650d53c1a7dfc56e1f0b8bc3",
+      "checkIn": "2025-01-05T14:00:00.000Z",
+      "checkOut": "2025-01-10T12:00:00.000Z",
+      "numberOfGuests": 5,
+      "couponCode": "NEWYEAR2025",
+      "customerInfo": {
+        "name": "John Doe",
+        "email": "johndoe@example.com"
+      },
+      "billingInfo": {
+        "totalAmount": 6000,
+        "discount": 1000,
+        "gstInfo": {
+          "rate": 18,
+          "amount": 900,
+          "sgst": 450,
+          "cgst": 450
+        },
+        "paymentStatus": "Paid"
+      },
+      "bookingStatus": "Confirmed",
+      "roomInfo": [
+        {
+          "roomId": "651fcd489a96a601fceddf8f",
+          "roomPrice": 2000,
+          "roomQuantity": 3
+        }
+      ]
+    },
+    {
+      "bookingId": 12349,
+      "userId": "650c7859ab1cfc45d3e8c9b4",
+      "propertyId": "650d53c1a7dfc56e1f0b8bc3",
+      "checkIn": "2025-01-20T14:00:00.000Z",
+      "checkOut": "2025-01-23T12:00:00.000Z",
+      "numberOfGuests": 3,
+      "couponCode": "WINTER2025",
+      "customerInfo": {
+        "name": "John Doe",
+        "email": "johndoe@example.com"
+      },
+      "billingInfo": {
+        "totalAmount": 4500,
+        "discount": 300,
+        "gstInfo": {
+          "rate": 18,
+          "amount": 756,
+          "sgst": 378,
+          "cgst": 378
+        },
+        "paymentStatus": "Pending"
+      },
+      "bookingStatus": "Pending",
+      "roomInfo": [
+        {
+          "roomId": "651fcd489a96a601fceddf8g",
+          "roomPrice": 1500,
+          "roomQuantity": 3
+        }
+      ]
+    },
+    {
+      "bookingId": 12350,
+      "userId": "650c7859ab1cfc45d3e8c9b4",
+      "propertyId": "650d53c1a7dfc56e1f0b8bc3",
+      "checkIn": "2025-02-10T14:00:00.000Z",
+      "checkOut": "2025-02-14T12:00:00.000Z",
+      "numberOfGuests": 2,
+      "couponCode": "LOVELY25",
+      "customerInfo": {
+        "name": "John Doe",
+        "email": "johndoe@example.com"
+      },
+      "billingInfo": {
+        "totalAmount": 3500,
+        "discount": 500,
+        "gstInfo": {
+          "rate": 18,
+          "amount": 540,
+          "sgst": 270,
+          "cgst": 270
+        },
+        "paymentStatus": "Paid"
+      },
+      "bookingStatus": "Confirmed",
+      "roomInfo": [
+        {
+          "roomId": "651fcd489a96a601fceddf8h",
+          "roomPrice": 1750,
+          "roomQuantity": 2
+        }
+      ]
+    },
+    {
+      "bookingId": 12351,
+      "userId": "650c7859ab1cfc45d3e8c9b4",
+      "propertyId": "650d53c1a7dfc56e1f0b8bc3",
+      "checkIn": "2025-03-05T14:00:00.000Z",
+      "checkOut": "2025-03-08T12:00:00.000Z",
+      "numberOfGuests": 4,
+      "couponCode": "SPRINGBREAK",
+      "customerInfo": {
+        "name": "John Doe",
+        "email": "johndoe@example.com"
+      },
+      "billingInfo": {
+        "totalAmount": 4800,
+        "discount": 400,
+        "gstInfo": {
+          "rate": 18,
+          "amount": 792,
+          "sgst": 396,
+          "cgst": 396
+        },
+        "paymentStatus": "Paid"
+      },
+      "bookingStatus": "Confirmed",
+      "roomInfo": [
+        {
+          "roomId": "651fcd479a96a601fceddf8i",
+          "roomPrice": 1600,
+          "roomQuantity": 3
+        }
+      ]
+    },
+    {
+      "bookingId": 12352,
+      "userId": "650c7859ab1cfc45d3e8c9b4",
+      "propertyId": "650d53c1a7dfc56e1f0b8bc3",
+      "checkIn": "2025-04-15T14:00:00.000Z",
+      "checkOut": "2025-04-20T12:00:00.000Z",
+      "numberOfGuests": 6,
+      "couponCode": "SUMMERVIBES",
+      "customerInfo": {
+        "name": "John Doe",
+        "email": "johndoe@example.com"
+      },
+      "billingInfo": {
+        "totalAmount": 7200,
+        "discount": 600,
+        "gstInfo": {
+          "rate": 18,
+          "amount": 950,
+          "sgst": 475,
+          "cgst": 475
+        },
+        "paymentStatus": "Pending"
+      },
+      "bookingStatus": "Pending",
+      "roomInfo": [
+        {
+          "roomId": "651fcd489a96a601fceddf8j",
+          "roomPrice": 2400,
+          "roomQuantity": 3
+        }
+      ]
+    }
+  ]
+  
