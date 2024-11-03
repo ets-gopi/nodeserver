@@ -14,19 +14,21 @@ const createBooking = async (req, res, next) => {
     session.startTransaction();
     //console.log("Transaction State:", session.transaction.state);
     //check the conflict in booking details.
-    const bookingdocs = await bookingModel.find(
-      {
-        $and: [
-          { propertyId: req.body.propertyId },
-          { checkIn: { $lt: new Date(req.body.checkOut) } },
-          { checkOut: { $gt: new Date(req.body.checkIn) } },
-          {
-            bookingStatus: { $in: ["Confirmed", "Pending", "CheckedIn"] },
-          },
-        ],
-      },
-      { roomInfo: 1 }
-    );
+    const bookingdocs = await bookingModel
+      .find(
+        {
+          $and: [
+            { propertyId: req.body.propertyId },
+            { checkIn: { $lt: new Date(req.body.checkOut) } },
+            { checkOut: { $gt: new Date(req.body.checkIn) } },
+            {
+              bookingStatus: { $in: ["Confirmed", "Pending", "CheckedIn"] },
+            },
+          ],
+        },
+        { roomInfo: 1 }
+      )
+      .session(session);
     console.log(bookingdocs);
 
     if (bookingdocs.length !== 0) {

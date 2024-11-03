@@ -242,14 +242,22 @@ const bookingSchema = {
     type: "date",
     required: true,
   },
+  totalGuests: {
+    type: "number",
+    required: true,
+  },
+  totalRooms: {
+    type: "number",
+    required: true,
+  },
+  nights: {
+    type: "number",
+    required: true,
+  },
   couponCode: {
     type: "string",
     // required:true,
     trim: true,
-  },
-  numberOfGuests: {
-    type: "number",
-    required: true,
   },
   roomInfo: {
     type: [
@@ -259,11 +267,20 @@ const bookingSchema = {
           required: true,
           trim: true,
         },
+        roomName: {
+          type: "string",
+          required: true,
+          trim: true,
+        },
         roomPrice: {
           type: "number",
           required: true,
         },
         roomQuantity: {
+          type: "number",
+          required: true,
+        },
+        guestsPerRoom: {
           type: "number",
           required: true,
         },
@@ -285,6 +302,10 @@ const bookingSchema = {
           sgst: { type: "number", required: true },
           cgst: { type: "number", required: true },
         },
+        required: true,
+      },
+      payableAmount: {
+        type: "number",
         required: true,
       },
     },

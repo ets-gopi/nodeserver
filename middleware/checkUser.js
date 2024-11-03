@@ -1,4 +1,4 @@
-const userModel = require("../models/user.model");
+const {userModel} = require("../models/user.model");
 const { createError, HttpError } = require("../utils/customError");
 
 const checkUser=async(req,res,next)=>{

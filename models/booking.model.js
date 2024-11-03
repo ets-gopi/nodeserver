@@ -23,21 +23,39 @@ const bookingSchema = new Schema(
     checkOut: {
       type: Date,
     },
-    numberOfGuests: {
+    nights: {
       type: Number,
     },
-
+    totalGuests: {
+      type: Number,
+    },
+    totalRooms: {
+      type: Number,
+    },
     couponCode: {
       type: String,
     },
-    customerInfo: {
-      type: {
-        name: {
-          type: String,
+    roomInfo: {
+      type: [
+        {
+          roomId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Room",
+          },
+          roomName: {
+            type: String,
+          },
+          roomPrice: {
+            type: Number,
+          },
+          roomQuantity: {
+            type: Number,
+          },
+          guestsPerRoom: {
+            type: Number,
+          },
         },
-        email: { type: String },
-      },
-      _id: false,
+      ],
     },
     billingInfo: {
       type: {
@@ -52,6 +70,7 @@ const bookingSchema = new Schema(
           },
           _id: false,
         },
+        payableAmount: { type: Number },
         paymentStatus: {
           type: String,
           enum: ["Paid", "Pending"],
@@ -60,26 +79,19 @@ const bookingSchema = new Schema(
       },
       _id: false,
     },
+    customerInfo: {
+      type: {
+        name: {
+          type: String,
+        },
+        email: { type: String },
+      },
+      _id: false,
+    },
     bookingStatus: {
       type: String,
       enum: ["Pending", "Confirmed", "CheckedIn", "CheckedOut", "Cancelled"],
       default: "Pending",
-    },
-    roomInfo: {
-      type: [
-        {
-          roomId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Room",
-          },
-          roomPrice: {
-            type: Number,
-          },
-          roomQuantity: {
-            type: Number,
-          },
-        },
-      ],
     },
   },
   {
