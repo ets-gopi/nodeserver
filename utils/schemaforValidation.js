@@ -328,10 +328,27 @@ const bookingSchema = {
   },
 };
 
+const searchRoomsSchema = {
+  propertyId: {
+    type: "string",
+    required: true,
+    trim: true,
+  },
+  checkIn: {
+    type: "date",
+    required: true,
+  },
+  checkOut: {
+    type: "date",
+    required: true,
+  },
+};
+
 module.exports = {
   userRegisterSchema,
   userLoginSchema,
   propertySchema,
   roomSchema,
   bookingSchema,
+  searchRoomsSchema,
 };

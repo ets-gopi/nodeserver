@@ -1,3 +1,4 @@
+const { Types } = require("mongoose");
 const { roomModel, mongoose } = require("../models/room.model");
 const { HttpError, createError } = require("../utils/customError");
 
@@ -386,8 +387,141 @@ const getRoomByUserIdByRoomId = async (req, res, next) => {
   }
 };
 
-const searchRooms=async(req,res,next)=>{
-    
+const searchRoomsByPropertyId = async (req, res, next) => {
+  const { checkIn, checkOut } = req.body;
+  const { propertyId } = req.params;
+
+  try {
+    const rooms = await roomModel.aggregate([
+      {
+        $match: {
+          propertyId: new mongoose.Types.ObjectId(propertyId),
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          description: 1,
+          roomType: 1,
+          BedType: 1,
+          maxOccupancy: 1,
+          numberOfBeds: 1,
+          pricePerNight: 1,
+          images: 1,
+          thumbnailImage: 1,
+          amenities: 1,
+          quantityAvailable: 1,
+          bookings: {
+            $filter: {
+              input: "$bookings",
+              as: "booking",
+              cond: {
+                $and: [
+                  { $lt: ["$$booking.checkIn", new Date(checkOut)] },
+                  { $gt: ["$$booking.checkOut", new Date(checkIn)] },
+                  {
+                    $in: [
+                      "$$booking.bookingStatus",
+                      ["Confirmed", "CheckedIn", "Pending"],
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          description: 1,
+          roomType: 1,
+          BedType: 1,
+          maxOccupancy: 1,
+          numberOfBeds: 1,
+          pricePerNight: 1,
+          images: 1,
+          thumbnailImage: 1,
+          amenities: 1,
+          quantityAvailable: 1,
+          bookings: 1,
+          roomQuantityBooked: {
+            $cond: {
+              if: { $gt: [{ $size: "$bookings" }, 0] },
+              then: {
+                $sum: "$bookings.roomQuantity",
+              },
+              else: 0,
+            },
+          },
+          roomsLeft: {
+            $subtract: [
+              "$quantityAvailable",
+              {
+                $cond: {
+                  if: { $gt: [{ $size: "$bookings" }, 0] },
+                  then: {
+                    $sum: "$bookings.roomQuantity",
+                  },
+                  else: 0,
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $match: {
+          roomsLeft: { $gt: 0 },
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          description: 1,
+          roomType: 1,
+          BedType: 1,
+          maxOccupancy: 1,
+          numberOfBeds: 1,
+          pricePerNight: 1,
+          images: 1,
+          thumbnailImage: 1,
+          amenities: 1,
+          quantityAvailable: 1,
+          roomsLeft: 1,
+        },
+      },
+    ]);
+
+    res.json({
+      status: true,
+      bcc: 200,
+      message: "Ok",
+      data: rooms,
+    });
+  } catch (error) {
+    console.error(error);
+
+    if (error instanceof HttpError) {
+      res.json({
+        status: false,
+        bcc: error.statusCode,
+        message: error.message,
+      });
+    } else if (error instanceof mongoose.Error.CastError) {
+      res.json({
+        status: false,
+        bcc: 400,
+        message: error.message,
+      });
+    } else {
+      res.json({
+        status: false,
+        bcc: 500,
+        message: "Internal server Issuse.",
+      });
+    }
+  }
 };
 
 const roomInfo = {
@@ -399,6 +533,7 @@ const roomInfo = {
   getRoomByUserIdByRoomId,
   getRoomById,
   getRoomByPropertyId,
+  searchRoomsByPropertyId,
 };
 
 module.exports = roomInfo;
