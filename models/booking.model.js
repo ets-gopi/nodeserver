@@ -6,7 +6,7 @@ const { Schema } = mongoose;
 const bookingSchema = new Schema(
   {
     bookingId: {
-      type: Number,
+      type: String,
       unique: true,
     },
     userId: {

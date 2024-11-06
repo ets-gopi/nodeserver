@@ -3,7 +3,10 @@ const { bookingModel, mongoose } = require("../models/booking.model");
 const { roomModel } = require("../models/room.model");
 const createBooking = async (req, res, next) => {
   console.log(req.body);
-  let conflictRoomsInfo = [];
+  const incomingRoomIds = req.body.roomInfo.map(
+    (room) => new mongoose.Types.ObjectId(room.roomId)
+  );
+  let conflictRoomsQuantityInfo = [];
   let availabilityCheck = true;
   let unavailableRooms = [];
   // start the session for
@@ -36,12 +39,18 @@ const createBooking = async (req, res, next) => {
       {
         $lookup: {
           from: "rooms",
-          let: { roomIds: "$roomInfo.roomId" },
+          let: {
+            roomIds: "$roomInfo.roomId",
+            incomingRoomIds: incomingRoomIds,
+          },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ["$_id", "$$roomIds"],
+                  $and: [
+                    { $in: ["$_id", "$$roomIds"] },
+                    { $in: ["$_id", "$$incomingRoomIds"] },
+                  ],
                 },
               },
             },
@@ -53,48 +62,101 @@ const createBooking = async (req, res, next) => {
               },
             },
           ],
-          as: "roomDetails",
+          as: "roomsConflictDetailInfo",
         },
       },
       {
         $project: {
           roomInfo: 1,
-          roomDetails: 1,
+          roomsConflictDetailInfo: 1,
         },
       },
     ]);
-    //console.log(conflictBookings);
+
+    // //console.log(conflictBookings);
     if (conflictBookings.length !== 0) {
       for (const booking of conflictBookings) {
-        const { roomInfo, roomDetails } = booking;
+        const { roomInfo, roomsConflictDetailInfo } = booking;
         // adding the total room quantity in conflicts rooms.
-        for (const conflictRoom of roomInfo) {
-          const isInsidetheRoomInfo = req.body.roomInfo.find(
-            (irf, ind) => irf.roomId === conflictRoom.roomId.toString()
-          );
-
-          if (isInsidetheRoomInfo) {
-            const isFound = conflictRoomsInfo.find(
-              (cr, ind) => cr.roomId === conflictRoom.roomId.toString()
+        if (roomsConflictDetailInfo.length > 0) {
+          for (const conflictRoom of roomsConflictDetailInfo) {
+            const isFound = conflictRoomsQuantityInfo.find(
+              (cr, ind) => cr.roomId === conflictRoom._id.toString()
+            );
+            const roomDetail = roomInfo.find(
+              (rd) => rd.roomId.toString() === conflictRoom._id.toString()
             );
             if (!isFound) {
-              conflictRoomsInfo.push({
-                roomId: conflictRoom.roomId.toString(),
-                roomQuantity: conflictRoom.roomQuantity,
-                quantityAvailable: roomDetails.find(
-                  (rd, ind) =>
-                    rd._id.toString() === conflictRoom.roomId.toString()
-                ).quantityAvailable,
+              conflictRoomsQuantityInfo.push({
+                roomId: roomDetail.roomId.toString(),
+                roomtotalBookedQuantity: roomDetail.roomQuantity,
+                quantityAvailable: conflictRoom.quantityAvailable,
               });
             } else {
-              isFound.roomQuantity =
-                isFound.roomQuantity + conflictRoom.roomQuantity;
+              isFound.roomtotalBookedQuantity =
+                isFound.roomtotalBookedQuantity + roomDetail.roomQuantity;
             }
           }
         }
       }
     }
-    console.log(conflictRoomsInfo);
+    // // find the unavaiable room type.
+    for (const inputroominfo of req.body.roomInfo) {
+      // find the input conflict room.
+      const isInputConflictRoom = conflictRoomsQuantityInfo.find(
+        (cr, ind) => cr.roomId === inputroominfo.roomId
+      );
+      if (isInputConflictRoom) {
+        // find the total quantity of room type.
+        const totalQuantity =
+          inputroominfo.roomQuantity +
+          isInputConflictRoom.roomtotalBookedQuantity;
+        if (totalQuantity > isInputConflictRoom.quantityAvailable) {
+          availabilityCheck = false;
+          unavailableRooms.push({
+            roomId: inputroominfo.roomId,
+            roomName: inputroominfo.roomName,
+            requested: inputroominfo.roomQuantity,
+            available:
+              isInputConflictRoom.roomtotalBookedQuantity >=
+              isInputConflictRoom.quantityAvailable
+                ? "Insufficient Rooms"
+                : isInputConflictRoom.quantityAvailable -
+                  isInputConflictRoom.roomtotalBookedQuantity,
+          });
+        }
+      } else {
+        // find the room quantity based on the propertyId and roomId.
+        const roomDoc = await roomModel.findOne(
+          {
+            _id: new mongoose.Types.ObjectId(inputroominfo.roomId),
+            propertyId: new mongoose.Types.ObjectId(req.body.propertyId),
+          },
+          {
+            maxOccupancy: 1,
+          }
+        );
+        if (inputroominfo.roomQuantity > roomDoc.maxOccupancy) {
+          (availabilityCheck = false),
+            unavailableRooms.push({
+              roomId: inputroominfo.roomId,
+              roomName: inputroominfo.roomName,
+              requested: inputroominfo.roomQuantity,
+              available: roomDoc.maxOccupancy,
+            });
+        }
+      }
+    }
+    if (!availabilityCheck) {
+      return res.json({
+        status: false,
+        bcc: 400,
+        message: "No Rooms Are Available.",
+        data: unavailableRooms,
+      });
+    }
+
+    // create booking if room are available.
 
     await session.commitTransaction();
     console.log("Transaction State:", session.transaction.state);
