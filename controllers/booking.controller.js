@@ -19,59 +19,61 @@ const createBooking = async (req, res, next) => {
     session.startTransaction();
     //console.log("Transaction State:", session.transaction.state);
     //check the conflict in booking details.
-    const conflictBookings = await bookingModel.aggregate([
-      {
-        $match: {
-          $and: [
-            {
-              propertyId: new mongoose.Types.ObjectId(
-                "650d53c1a7dfc56e1f0b8bc3"
-              ),
-            },
-            { checkIn: { $lt: new Date(req.body.checkOut) } },
-            { checkOut: { $gt: new Date(req.body.checkIn) } },
-            {
-              bookingStatus: { $in: ["Confirmed", "Pending", "CheckedIn"] },
-            },
-          ],
-        },
-      },
-      {
-        $lookup: {
-          from: "rooms",
-          let: {
-            roomIds: "$roomInfo.roomId",
-            incomingRoomIds: incomingRoomIds,
+    const conflictBookings = await bookingModel
+      .aggregate([
+        {
+          $match: {
+            $and: [
+              {
+                propertyId: new mongoose.Types.ObjectId(
+                  "650d53c1a7dfc56e1f0b8bc3"
+                ),
+              },
+              { checkIn: { $lt: new Date(req.body.checkOut) } },
+              { checkOut: { $gt: new Date(req.body.checkIn) } },
+              {
+                bookingStatus: { $in: ["Confirmed", "Pending", "CheckedIn"] },
+              },
+            ],
           },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $in: ["$_id", "$$roomIds"] },
-                    { $in: ["$_id", "$$incomingRoomIds"] },
-                  ],
+        },
+        {
+          $lookup: {
+            from: "rooms",
+            let: {
+              roomIds: "$roomInfo.roomId",
+              incomingRoomIds: incomingRoomIds,
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $in: ["$_id", "$$roomIds"] },
+                      { $in: ["$_id", "$$incomingRoomIds"] },
+                    ],
+                  },
                 },
               },
-            },
-            {
-              $project: {
-                _id: 1,
-                name: 1,
-                quantityAvailable: 1,
+              {
+                $project: {
+                  _id: 1,
+                  name: 1,
+                  quantityAvailable: 1,
+                },
               },
-            },
-          ],
-          as: "roomsConflictDetailInfo",
+            ],
+            as: "roomsConflictDetailInfo",
+          },
         },
-      },
-      {
-        $project: {
-          roomInfo: 1,
-          roomsConflictDetailInfo: 1,
+        {
+          $project: {
+            roomInfo: 1,
+            roomsConflictDetailInfo: 1,
+          },
         },
-      },
-    ]);
+      ])
+      .session(session);
 
     // //console.log(conflictBookings);
     if (conflictBookings.length !== 0) {
