@@ -411,6 +411,7 @@ const searchRoomsByPropertyId = async (req, res, next) => {
           thumbnailImage: 1,
           amenities: 1,
           quantityAvailable: 1,
+          isAvailable: 1,
           bookings: {
             $filter: {
               input: "$bookings",
@@ -445,6 +446,7 @@ const searchRoomsByPropertyId = async (req, res, next) => {
           amenities: 1,
           quantityAvailable: 1,
           bookings: 1,
+          isAvailable: 1,
           roomQuantityBooked: {
             $cond: {
               if: { $gt: [{ $size: "$bookings" }, 0] },
@@ -488,6 +490,7 @@ const searchRoomsByPropertyId = async (req, res, next) => {
           thumbnailImage: 1,
           amenities: 1,
           quantityAvailable: 1,
+          isAvailable: 1,
           roomsLeft: 1,
         },
       },

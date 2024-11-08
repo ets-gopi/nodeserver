@@ -1,4 +1,15 @@
 const mongoose = require("mongoose");
+const counterModel = require("./counter.model");
+async function getNextSequenceValue(fieldName) {
+  const counter = await counterModel.findOneAndUpdate(
+    { fieldName },
+    { $inc: { sequenceValue: 1 } }, // Increment the sequence by 1
+    { new: true, upsert: true } // Create the counter if it doesn't exist
+  );
+
+  return counter.sequenceValue;
+}
+
 const { Schema } = mongoose;
 
 // booking Schema
@@ -6,7 +17,7 @@ const { Schema } = mongoose;
 const bookingSchema = new Schema(
   {
     bookingId: {
-      type: String,
+      type: Number,
       unique: true,
     },
     userId: {
@@ -100,6 +111,14 @@ const bookingSchema = new Schema(
   }
 );
 
+bookingSchema.pre("save", async function (next) {
+  const booking = this;
+  if (!booking.bookingId) {
+    // Only set bookingId if it doesn't exist
+    booking.bookingId = await getNextSequenceValue("bookingId");
+  }
+  next();
+});
 const bookingModel = mongoose.model("Booking", bookingSchema);
 
 module.exports = { bookingModel, mongoose };
