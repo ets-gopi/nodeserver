@@ -3,6 +3,7 @@ const { bookingModel, mongoose } = require("../models/booking.model");
 const { roomModel } = require("../models/room.model");
 const { userModel } = require("../models/user.model");
 const { HttpError, createError } = require("../utils/customError");
+const { delay } = require("../utils/delay");
 
 const handleErrorResponse = (error, res) => {
   if (error instanceof HttpError) {
