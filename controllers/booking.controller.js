@@ -53,9 +53,7 @@ const checkRoomAvailability = async (req, res, next) => {
           $match: {
             $and: [
               {
-                propertyId: new mongoose.Types.ObjectId(
-                  "650d53c1a7dfc56e1f0b8bc3"
-                ),
+                propertyId: new mongoose.Types.ObjectId(req.body.propertyId),
               },
               { checkIn: { $lt: new Date(req.body.checkOut) } },
               { checkOut: { $gt: new Date(req.body.checkIn) } },
@@ -161,17 +159,17 @@ const checkRoomAvailability = async (req, res, next) => {
               propertyId: new mongoose.Types.ObjectId(req.body.propertyId),
             },
             {
-              maxOccupancy: 1,
+              quantityAvailable: 1,
             }
           )
           .session(session);
-        if (inputroominfo.roomQuantity > roomDoc.maxOccupancy) {
+        if (inputroominfo.roomQuantity > roomDoc.quantityAvailable) {
           (availabilityCheck = false),
             unavailableRooms.push({
               roomId: inputroominfo.roomId,
               roomName: inputroominfo.roomName,
               requested: inputroominfo.roomQuantity,
-              available: roomDoc.maxOccupancy,
+              available: roomDoc.quantityAvailable,
             });
         }
       }
@@ -185,6 +183,7 @@ const checkRoomAvailability = async (req, res, next) => {
   } catch (error) {
     console.error(error);
     await session.abortTransaction();
+    await session.endSession();
     handleErrorResponse(error, res);
   }
 };
@@ -200,6 +199,7 @@ const createBooking = async (req, res, next) => {
   } catch (error) {
     console.error(error);
     await session.abortTransaction();
+    await session.endSession();
     handleErrorResponse(error, res);
   }
 };
@@ -244,6 +244,7 @@ const updateRooms = async (req, res, next) => {
   } catch (error) {
     console.error(error);
     await session.abortTransaction();
+    await session.endSession();
     handleErrorResponse(error, res);
   }
 };
@@ -272,6 +273,7 @@ const updateUserInfo = async (req, res, next) => {
   } catch (error) {
     console.error(error);
     await session.abortTransaction();
+    await session.endSession();
     handleErrorResponse(error, res);
   }
 };
@@ -294,7 +296,6 @@ const finalizeBooking = async (req, res, next) => {
     await session.endSession();
   }
 };
-
 
 const testing = async (req, res, next) => {
   const checkin = "2024-11-10";

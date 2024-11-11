@@ -396,6 +396,7 @@ const searchRoomsByPropertyId = async (req, res, next) => {
       {
         $match: {
           propertyId: new mongoose.Types.ObjectId(propertyId),
+          isAvailable: true,
         },
       },
       {
