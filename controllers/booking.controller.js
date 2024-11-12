@@ -19,6 +19,14 @@ const handleErrorResponse = (error, res) => {
       bcc: 400,
       message: error.message,
     });
+  } else if (error.hasErrorLabel("TransientTransactionError")) {
+    res.json({
+      status: false,
+      bcc: 503,
+      message:
+        "There was a conflict while processing your booking. Please try again later.",
+      error: error.message,
+    });
   } else {
     res.json({
       status: false,
