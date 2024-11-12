@@ -10,6 +10,7 @@ router.post(
   bookingValidation,
   bookingInfo.transactionMiddleware,
   bookingInfo.checkRoomAvailability,
+  bookingInfo.reserveRooms,
   bookingInfo.createBooking,
   bookingInfo.updateRooms,
   bookingInfo.updateUserInfo,

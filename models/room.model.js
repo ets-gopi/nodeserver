@@ -75,6 +75,10 @@ const roomSchema = new Schema(
     quantityAvailable: {
       type: Number,
     },
+    isLocked: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

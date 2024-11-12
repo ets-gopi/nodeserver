@@ -182,9 +182,45 @@ const checkRoomAvailability = async (req, res, next) => {
     }
     next();
   } catch (error) {
-    console.error(error);
+    console.error("checkRoomAvailability", error);
     await session.abortTransaction();
     await session.endSession();
+    handleErrorResponse(error, res);
+  }
+};
+
+const reserveRooms = async (req, res, next) => {
+  const session = req.bookingSession;
+
+  try {
+    for (const roomInfo of req.body.roomInfo) {
+      const roomId = new mongoose.Types.ObjectId(roomInfo.roomId);
+      const result = await roomModel
+        .updateOne(
+          {
+            _id: roomId,
+            propertyId: new mongoose.Types.ObjectId(req.body.propertyId),
+            isLocked: false,
+          },
+          {
+            $set: { isLocked: true },
+          }
+        )
+        .session(session);
+
+      if (result.modifiedCount === 0) {
+        // If no document was modified, it means the room is either already locked or not available
+        throw createError(
+          "Room is not available for provisional reservation",
+          400
+        );
+      }
+    }
+    next();
+  } catch (error) {
+    console.error("reserveRooms", error);
+    await session.abortTransaction();
+    session.endSession();
     handleErrorResponse(error, res);
   }
 };
@@ -194,11 +230,12 @@ const createBooking = async (req, res, next) => {
   try {
     // create booking if room are available.
     const booking = new bookingModel({ ...req.body });
+
     await booking.save({ session: session });
     req.bookingDetails = booking.toObject();
     next();
   } catch (error) {
-    console.error(error);
+    console.error("createBooking", error);
     await session.abortTransaction();
     await session.endSession();
     handleErrorResponse(error, res);
@@ -227,6 +264,9 @@ const updateRooms = async (req, res, next) => {
               bookingId,
             },
           },
+          $set: {
+            isLocked: false,
+          },
         },
         {
           session: session,
@@ -243,7 +283,7 @@ const updateRooms = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error(error);
+    console.error("updateRooms", error);
     await session.abortTransaction();
     await session.endSession();
     handleErrorResponse(error, res);
@@ -272,7 +312,7 @@ const updateUserInfo = async (req, res, next) => {
     }
     next();
   } catch (error) {
-    console.error(error);
+    console.error("updateUserInfo", error);
     await session.abortTransaction();
     await session.endSession();
     handleErrorResponse(error, res);
@@ -290,7 +330,7 @@ const finalizeBooking = async (req, res, next) => {
       message: "Booking Created Successfully.",
     });
   } catch (error) {
-    console.error(error);
+    console.error("finalizeBooking", error);
     await session.abortTransaction();
     handleErrorResponse(error, res);
   } finally {
@@ -321,6 +361,7 @@ const testing = async (req, res, next) => {
 const bookingInfo = {
   transactionMiddleware,
   checkRoomAvailability,
+  reserveRooms,
   createBooking,
   updateRooms,
   updateUserInfo,
