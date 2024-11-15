@@ -123,49 +123,30 @@ const deleteRoomByPropertyIdByRoomId = async (req, res, next) => {
 };
 
 const getAllRooms = async (req, res, next) => {
-  let roomsArray = [];
   try {
-    const allRooms = await roomModel.find({});
-    if (allRooms.length > 0) {
-      roomsArray = allRooms.map((room, ind) => {
-        const {
-          id,
-          name,
-          description,
-          roomType,
-          BedType,
-          maxOccupancy,
-          numberOfBeds,
-          pricePerNight,
-          isAvailable,
-          images,
-          thumbnailImage,
-          amenities,
-          quantityAvailable,
-        } = room;
-        return {
-          id,
-          name,
-          description,
-          roomType,
-          BedType,
-          maxOccupancy,
-          numberOfBeds,
-          pricePerNight,
-          isAvailable,
-          images,
-          thumbnailImage,
-          amenities,
-          quantityAvailable,
-        };
-      });
-    }
+    const allRooms = await roomModel.find(
+      {},
+      {
+        name: 1,
+        description: 1,
+        roomType: 1,
+        BedType: 1,
+        maxOccupancy: 1,
+        numberOfBeds: 1,
+        pricePerNight: 1,
+        isAvailable: 1,
+        images: 1,
+        thumbnailImage: 1,
+        amenities: 1,
+        quantityAvailable: 1,
+      }
+    );
 
     res.json({
       status: true,
       bcc: 200,
       message: `All Rooms are fetched Successfully.`,
-      data: roomsArray,
+      data: allRooms,
     });
   } catch (error) {
     console.error(error);
@@ -188,45 +169,32 @@ const getAllRooms = async (req, res, next) => {
 
 const getRoomById = async (req, res, next) => {
   const { roomId } = req.params;
-  let roomObj = {};
   try {
-    const Roomdoc = await roomModel.findOne({ _id: roomId });
+    const Roomdoc = await roomModel.findOne(
+      { _id: roomId },
+      {
+        name: 1,
+        description: 1,
+        roomType: 1,
+        BedType: 1,
+        maxOccupancy: 1,
+        numberOfBeds: 1,
+        pricePerNight: 1,
+        isAvailable: 1,
+        images: 1,
+        thumbnailImage: 1,
+        amenities: 1,
+        quantityAvailable: 1,
+      }
+    );
     if (!Roomdoc) {
       throw createError("room dose not exit", 404);
     }
-    roomObj = Roomdoc.toObject();
-    const {
-      name,
-      description,
-      roomType,
-      BedType,
-      maxOccupancy,
-      numberOfBeds,
-      pricePerNight,
-      isAvailable,
-      images,
-      thumbnailImage,
-      amenities,
-      quantityAvailable,
-    } = roomObj;
     res.json({
       status: true,
       bcc: 200,
       message: `Room data  fetched Successfully.`,
-      data: {
-        name,
-        description,
-        roomType,
-        BedType,
-        maxOccupancy,
-        numberOfBeds,
-        pricePerNight,
-        isAvailable,
-        images,
-        thumbnailImage,
-        amenities,
-        quantityAvailable,
-      },
+      data: Roomdoc.toObject(),
     });
   } catch (error) {
     console.error(error);
@@ -256,32 +224,31 @@ const getRoomById = async (req, res, next) => {
 const getRoomByPropertyId = async (req, res, next) => {
   const { propertyId } = req.params;
   try {
-    const Roomsdoc = await roomModel.find({ propertyId });
+    const Roomsdoc = await roomModel.find(
+      { propertyId },
+      {
+        name: 1,
+        description: 1,
+        roomType: 1,
+        BedType: 1,
+        maxOccupancy: 1,
+        numberOfBeds: 1,
+        pricePerNight: 1,
+        isAvailable: 1,
+        images: 1,
+        thumbnailImage: 1,
+        amenities: 1,
+        quantityAvailable: 1,
+      }
+    );
     if (Roomsdoc.length === 0) {
       throw createError("rooms does not exit", 404);
     }
-    const modrooms = Roomsdoc?.map((room, obj) => {
-      return {
-        id: room._id,
-        name: room.name,
-        description: room.description,
-        roomType: room.roomType,
-        BedType: room.BedType,
-        maxOccupancy: room.maxOccupancy,
-        numberOfBeds: room.numberOfBeds,
-        pricePerNight: room.pricePerNight,
-        isAvailable: room.isAvailable,
-        images: room.images,
-        thumbnailImage: room.thumbnailImage,
-        amenities: room.amenities,
-        quantityAvailable: room.quantityAvailable,
-      };
-    });
     res.json({
       status: true,
       bcc: 200,
       message: `Rooms data  fetched Successfully.`,
-      data: modrooms,
+      data: Roomsdoc.map((room, ind) => room.toObject()),
     });
   } catch (error) {
     console.error(error);
@@ -310,15 +277,31 @@ const getRoomByPropertyId = async (req, res, next) => {
 
 const getRoomsByUserId = async (req, res, next) => {
   try {
-    const propertyRooms = await roomModel.find({ userId: req.payload.id });
-    if (!propertyRooms) {
-      throw createError("property does not found.", 404);
+    const Roomsdoc = await roomModel.find(
+      { userId: req.payload.id },
+      {
+        name: 1,
+        description: 1,
+        roomType: 1,
+        BedType: 1,
+        maxOccupancy: 1,
+        numberOfBeds: 1,
+        pricePerNight: 1,
+        isAvailable: 1,
+        images: 1,
+        thumbnailImage: 1,
+        amenities: 1,
+        quantityAvailable: 1,
+      }
+    );
+    if (!Roomsdoc) {
+      throw createError("user property data does not found.", 404);
     }
     res.json({
       status: true,
       bcc: 200,
       message: "rooms data feteched successfully.",
-      data: propertyRooms,
+      data: Roomsdoc,
     });
   } catch (error) {
     console.error(error);

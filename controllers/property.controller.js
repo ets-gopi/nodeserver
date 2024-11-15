@@ -132,7 +132,21 @@ const deletePropertyById = async (req, res, next) => {
 const getPropertyById = async (req, res, next) => {
   const { id } = req.params;
   try {
-    const property = await propertyModel.findById(id);
+    const property = await propertyModel.findById(id, {
+      name: 1,
+      location: 1,
+      description: 1,
+      starRating: 1,
+      checkInTime: 1,
+      checkOutTime: 1,
+      availabilityStatus: 1,
+      totalRooms: 1,
+      availableRooms: 1,
+      images: 1,
+      thumbnailImage: 1,
+      amenities: 1,
+      contactInfo: 1,
+    });
     if (!property) {
       throw createError("property does not found.", 404);
     }
@@ -141,22 +155,7 @@ const getPropertyById = async (req, res, next) => {
       status: true,
       bcc: 200,
       message: "property data feteched successfully.",
-      data: {
-        id: propObj._id,
-        name: propObj.name,
-        location: propObj.location,
-        description: propObj.description,
-        starRating: propObj.starRating,
-        checkInTime: propObj.checkInTime,
-        checkOutTime: propObj.checkOutTime,
-        availabilityStatus: propObj.availabilityStatus,
-        totalRooms: propObj.totalRooms,
-        availableRooms: propObj.availableRooms,
-        images: propObj.images,
-        thumbnailImage: propObj.thumbnailImage,
-        amenities: propObj.amenities,
-        contactInfo: propObj.contactInfo,
-      },
+      data: propObj,
     });
   } catch (error) {
     console.error(error);
@@ -186,32 +185,30 @@ const getPropertyById = async (req, res, next) => {
 // get all properties.
 const getAllProperties = async (req, res, next) => {
   try {
-    const allproperties = await propertyModel.find({});
-
-    const modproperties = allproperties?.map((prop, ind) => {
-      return {
-        id: prop._id,
-        name: prop.name,
-        location: prop.location,
-        description: prop.description,
-        starRating: prop.starRating,
-        checkInTime: prop.checkInTime,
-        checkOutTime: prop.checkOutTime,
-        availabilityStatus: prop.availabilityStatus,
-        totalRooms: prop.totalRooms,
-        availableRooms: prop.availableRooms,
-        images: prop.images,
-        thumbnailImage: prop.thumbnailImage,
-        amenities: prop.amenities,
-        contactInfo: prop.contactInfo,
-      };
-    });
+    const allpropertiesdoc = await propertyModel.find(
+      {},
+      {
+        name: 1,
+        location: 1,
+        description: 1,
+        starRating: 1,
+        checkInTime: 1,
+        checkOutTime: 1,
+        availabilityStatus: 1,
+        totalRooms: 1,
+        availableRooms: 1,
+        images: 1,
+        thumbnailImage: 1,
+        amenities: 1,
+        contactInfo: 1,
+      }
+    );
 
     res.json({
       status: true,
       bcc: 200,
       message: `All Properties are fetched Successfully.`,
-      data: modproperties,
+      data: allpropertiesdoc.map((prop, ind) => prop.toObject()),
     });
   } catch (error) {
     console.error(error);

@@ -71,6 +71,50 @@ const login = async (req, res, next) => {
   }
 };
 
-const userInfo = { register, login };
+const getUserDetails = async (req, res, next) => {
+  console.log(req.payload);
+
+  try {
+    const userDoc = await userModel.findById(req.payload.id, {
+      _id: 0,
+      username: 1,
+      email: 1,
+    });
+    if (!userDoc) {
+      throw createError("user does not found.", 404);
+    }
+    const userObj = userDoc.toObject();
+    res.json({
+      status: true,
+      bcc: 200,
+      message: "user data feteched successfully.",
+      data: userObj,
+    });
+  } catch (error) {
+    console.error(error);
+
+    if (error instanceof HttpError) {
+      res.json({
+        status: false,
+        bcc: error.statusCode,
+        message: error.message,
+      });
+    } else if (error instanceof mongoose.Error.CastError) {
+      res.json({
+        status: false,
+        bcc: 400,
+        message: error.message,
+      });
+    } else {
+      res.json({
+        status: false,
+        bcc: 500,
+        message: "Internal server Issuse.",
+      });
+    }
+  }
+};
+
+const userInfo = { register, login, getUserDetails };
 
 module.exports = userInfo;
