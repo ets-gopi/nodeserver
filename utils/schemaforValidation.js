@@ -344,6 +344,59 @@ const searchRoomsSchema = {
   },
 };
 
+const createOrderIdDataSchema = {
+  propertyId: {
+    type: "string",
+    required: true,
+    trim: true,
+  },
+  checkIn: {
+    type: "date",
+    required: true,
+  },
+  checkOut: {
+    type: "date",
+    required: true,
+  },
+  roomInfo: {
+    type: [
+      {
+        roomId: {
+          type: "string",
+          required: true,
+          trim: true,
+        },
+        roomName: {
+          type: "string",
+          required: true,
+          trim: true,
+        },
+        roomPrice: {
+          type: "number",
+          required: true,
+        },
+        roomQuantity: {
+          type: "number",
+          required: true,
+        },
+        guestsPerRoom: {
+          type: "number",
+          required: true,
+        },
+      },
+    ],
+    required: true,
+  },
+  amount: {
+    type: "number",
+    required: true,
+  },
+  currency: {
+    type: "string",
+    required: true,
+    minLength: 3,
+  },
+};
 module.exports = {
   userRegisterSchema,
   userLoginSchema,
@@ -351,4 +404,5 @@ module.exports = {
   roomSchema,
   bookingSchema,
   searchRoomsSchema,
+  createOrderIdDataSchema
 };

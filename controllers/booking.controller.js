@@ -1,4 +1,5 @@
 // working with transactions in mongodb.
+const razorpayInstance = require("../config/razorpay.config");
 const { bookingModel, mongoose } = require("../models/booking.model");
 const { roomModel } = require("../models/room.model");
 const { userModel } = require("../models/user.model");
@@ -19,7 +20,7 @@ const handleErrorResponse = (error, res) => {
       bcc: 400,
       message: error.message,
     });
-  } else if (error.hasErrorLabel("TransientTransactionError")) {
+  } else if (error?.hasErrorLabel("TransientTransactionError")) {
     res.json({
       status: false,
       bcc: 503,
@@ -346,6 +347,36 @@ const finalizeBooking = async (req, res, next) => {
   }
 };
 
+const finalizeOrderId = async (req, res, next) => {
+  const session = req.bookingSession;
+  try {
+    //create the orderid here.
+    const order = await razorpayInstance.orders.create({
+      amount: req.body.amount,
+      currency: req.body.currency,
+      receipt: `receipt_${new Date().getTime()}`,
+    });
+    // Once all other updates are done, commit the transaction
+    await session.commitTransaction();
+    res.json({
+      status: true,
+      bcc: 201,
+      message: "orderId created successfully.",
+      data: {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+      },
+    });
+  } catch (error) {
+    console.error("finalizeBooking", error);
+    await session.abortTransaction();
+    handleErrorResponse(error, res);
+  } finally {
+    await session.endSession();
+  }
+};
+
 const testing = async (req, res, next) => {
   const checkin = "2024-11-10";
   const checkout = "2024-11-16";
@@ -374,6 +405,7 @@ const bookingInfo = {
   updateRooms,
   updateUserInfo,
   finalizeBooking,
+  finalizeOrderId,
   testing,
 };
 module.exports = bookingInfo;

@@ -11,7 +11,7 @@ const {
   roomValidation,
   updateRoomValidation,
 } = require("../middleware/room.validation.middleware");
-const serachRoomsValidation = require("../middleware/serachRoomValidation");
+const {serachRoomsValidation} = require("../middleware/serachRoomValidation");
 
 router.get("/", verifyAccessToken, roomInfo.getAllRooms);
 router.get("/room/:roomId", verifyAccessToken, roomInfo.getRoomById);

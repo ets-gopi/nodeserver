@@ -4,23 +4,14 @@ const { searchRoomsSchema } = require("../utils/schemaforValidation");
 const Validator = require("../utils/validator");
 const serachRoomsValidation = async (req, res, next) => {
   try {
-    const propertydocs = await propertyModel.find(
-      {},
-      {
-        _id: 1,
-      }
-    );
-    let propertyIds = [];
-    for (const obj of propertydocs) {
-      propertyIds.push(obj._id.toString());
-    }
-    if (
-      !propertyIds?.includes(
-        mongoose.Types.ObjectId.isValid(req.params.propertyId) &&
-          req.params.propertyId
-      )
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.propertyId)) {
       throw createError("Invalid Property ID.", 400);
+    }
+    const propertydocs = await propertyModel.findById(req.params.propertyId, {
+      _id: 1,
+    });
+    if (!propertydocs) {
+      throw createError("property does not found.", 404);
     }
     const roomsSchema = new Validator(searchRoomsSchema);
     const { data, errors } = roomsSchema.validate({
@@ -43,6 +34,12 @@ const serachRoomsValidation = async (req, res, next) => {
         message: error.message,
         error: error.error,
       });
+    } else if (error instanceof mongoose.Error.CastError) {
+      res.json({
+        status: false,
+        bcc: 400,
+        message: error.message,
+      });
     } else {
       res.json({
         status: false,
@@ -53,4 +50,49 @@ const serachRoomsValidation = async (req, res, next) => {
   }
 };
 
-module.exports = serachRoomsValidation;
+const userSearchDetailsValidation = async (req, res, next) => {
+  const { userSearchDetails } = req.body;
+  try {
+    if (!userSearchDetails) {
+      next();
+    } else {
+      const roomsSchema = new Validator(searchRoomsSchema);
+      const { data, errors } = roomsSchema.validate({
+        ...userSearchDetails,
+      });
+      //console.log(data, errors);
+      if (Object.keys(errors).length > 0) {
+        throw createError("Invalid Request.", 400, { error: errors });
+      }
+      req.body = {
+        userSearchDetails: data,
+      };
+      next();
+    }
+  } catch (error) {
+    console.error(error);
+
+    if (error instanceof HttpError) {
+      res.json({
+        status: false,
+        bcc: error.statusCode,
+        message: error.message,
+        error: error.error,
+      });
+    } else if (error instanceof mongoose.Error.CastError) {
+      res.json({
+        status: false,
+        bcc: 400,
+        message: error.message,
+      });
+    } else {
+      res.json({
+        status: false,
+        bcc: 500,
+        message: "Internal server Issuse.",
+      });
+    }
+  }
+};
+
+module.exports = { serachRoomsValidation, userSearchDetailsValidation };

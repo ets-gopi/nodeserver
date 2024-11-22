@@ -1,15 +1,51 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+dotenv.config();
+const session = require("express-session");
+const MongoStore = require("connect-mongo");
 const routes = require("./routes");
 const connectDB = require("./config/db.config");
-dotenv.config();
 connectDB();
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: "http://localhost:3000", 
+  credentials: true,
+};
 
+app.use(cors(corsOptions));
+
+// set up session middleware.
+app.use(
+  session({
+    secret: process.env.SESSION_SCERET,
+    name: "session_id",
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      dbName: process.env.DB_NAME,
+      collectionName: process.env.SESSION_COLLECTION_NAME,
+    }),
+    cookie: {
+      path: "/",
+      secure: false,
+      httpOnly: true,
+      maxAge: 7200000,
+    },
+  })
+);
+
+// Logging middleware to check session data
+app.use((req, res, next) => {
+  console.log("Session ID:", req.sessionID);
+  console.log("Session Data:", req.session);
+  console.log("Cookies:", req.cookies);
+  console.log("Session Cookie:", req.headers.cookie);
+  next();
+});
 // Middleware to parse JSON bodies
 app.use(express.json());
 
