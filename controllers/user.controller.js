@@ -1,8 +1,8 @@
-
 const { userModel, mongoose } = require("../models/user.model");
 const { HttpError, createError } = require("../utils/customError");
 const { countdownFormat } = require("../utils/formatDate");
 const { signAccessToken } = require("../utils/jwt.tokens");
+const { isUserSessionData } = require("../utils/session.helper");
 
 const register = async (req, res, next) => {
   const { email } = req.body;
@@ -48,12 +48,31 @@ const login = async (req, res, next) => {
       throw createError(`InValid Credentails.`, 401);
     }
     const token = await signAccessToken(isExist._id);
-    res.json({
-      status: true,
-      bcc: 200,
-      message: "Ok",
-      accessToken: token,
-    });
+    const isSessionExit = await isUserSessionData(isExist._id.toString());
+    console.log("isSessionExit", isSessionExit);
+    if (!isSessionExit) {
+      //create the session.
+      req.session.userId = isExist._id.toString();
+      req.session.guestDetails = {
+        name: isExist?.username,
+        email: isExist?.email,
+      };
+      res.json({
+        status: true,
+        bcc: 200,
+        message: "Ok",
+        accessToken: token,
+        sessionId: req.sessionID,
+      });
+    } else {
+      res.json({
+        status: true,
+        bcc: 200,
+        message: "Ok",
+        accessToken: token,
+        sessionId: isSessionExit.sessionId,
+      });
+    }
   } catch (error) {
     console.error(error);
 
@@ -169,36 +188,24 @@ const manipulateUserSessionData = async (req, res, next) => {
 };
 
 const getUserSessionData = async (req, res, next) => {
-  let isSessionDataFound = false,
-    sessionData = {};
   const currentDatePlusOneDay = new Date();
   currentDatePlusOneDay.setDate(currentDatePlusOneDay.getDate() + 1);
-  
-  try {
-    const sessiondocs = await mongoose.connection
-      .useDb("hotel_db")
-      .collection("sessions")
-      .find({})
-      .toArray();
-    if (sessiondocs.length > 0) {
-      for (const session of sessiondocs) {
-        const data = JSON.parse(session.session);
-        if (data.userId === req.payload.id) {
-          isSessionDataFound = true;
-          sessionData = data;
-          break;
-        }
-      }
-    }
 
-    if (isSessionDataFound && sessionData) {
+  try {
+    const isUserExist = await userModel.findById(req.payload.id);
+    const sessionData = await isUserSessionData(req.payload.id);
+    if (sessionData) {
       res.json({
         status: true,
         bcc: 200,
         message: "feteched session data successfully.",
         data: {
-          userId: sessionData?.userId || req.payload.id,
-          userSearchDetails: sessionData?.userSearchDetails || {},
+          userSearchDetails: sessionData?.userSearchDetails || {
+            checkIn: countdownFormat(new Date()),
+            checkOut: countdownFormat(currentDatePlusOneDay),
+            totalGuests: 2,
+            propertyId: null,
+          },
           guestDetails: sessionData?.guestDetails || {},
           cartInfo: sessionData?.cartInfo || [],
           count: sessionData.count || 0,
@@ -210,14 +217,16 @@ const getUserSessionData = async (req, res, next) => {
         bcc: 400,
         message: "session expired.",
         data: {
-          userId: req.payload.id,
           userSearchDetails: {
             checkIn: countdownFormat(new Date()),
             checkOut: countdownFormat(currentDatePlusOneDay),
             totalGuests: 2,
             propertyId: null,
           },
-          guestDetails: {},
+          guestDetails: {
+            name: isUserExist?.username,
+            email: isUserExist?.email,
+          },
           cartInfo: [],
           count: 0,
         },
@@ -248,12 +257,28 @@ const getUserSessionData = async (req, res, next) => {
   }
 };
 
+//logout the user
+const logout = async (req, res, next) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({
+        code: "INTERNAL_SERVER_ERROR",
+        status: false,
+        message: "SOMETHING WENT WRONG.",
+      });
+    }
+    res.clearCookie("session_id");
+    res.json({ code: "OK", status: true, message: "Logout successful" });
+  });
+};
+
 const userInfo = {
   register,
   login,
   getUserDetails,
   manipulateUserSessionData,
   getUserSessionData,
+  logout,
 };
 
 module.exports = userInfo;

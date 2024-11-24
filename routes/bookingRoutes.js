@@ -15,6 +15,7 @@ router.post(
   orderDataValidation,
   bookingInfo.transactionMiddleware,
   bookingInfo.checkRoomAvailability,
+  bookingInfo.createOrderId,
   bookingInfo.reserveRooms,
   bookingInfo.finalizeOrderId
 );

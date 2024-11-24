@@ -18,4 +18,6 @@ router.post(
 );
 router.get("/get-session-data", verifyAccessToken, userInfo.getUserSessionData);
 
+router.post("/logout", verifyAccessToken, userInfo.logout);
+
 module.exports = router;

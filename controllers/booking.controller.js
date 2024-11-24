@@ -198,9 +198,50 @@ const checkRoomAvailability = async (req, res, next) => {
   }
 };
 
+const createOrderId = async (req, res, next) => {
+  const session = req.bookingSession;
+  try {
+    // add the checkout key to the req.session
+    if (
+      !req.session ||
+      !req.session.userSearchDetails ||
+      !req.session.cartInfo ||
+      !req.session.guestDetails
+    ) {
+      throw createError("user session data not found", 404);
+    }
+
+    //create the orderid here.
+    const order = await razorpayInstance.orders.create({
+      amount: req.body.amount * 100,
+      currency: req.body.currency,
+      receipt: `receipt_${new Date().getTime()}`,
+    });
+
+    req.session.checkOut = {
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      createdAt: new Date(order.created_at * 1000),
+      expiresAt: new Date(order.created_at * 1000 + 15 * 60 * 1000),
+      paymentStatus: "Pending",
+    };
+    req.session.save((err) => {
+      if (err) {
+        throw createError("Failed to save user session", 500);
+      }
+    });
+    req.reserveUntill = order.created_at * 1000 + 15 * 60 * 1000;
+    next();
+  } catch (error) {
+    console.error("orderId", error);
+    await session.abortTransaction();
+    handleErrorResponse(error, res);
+  }
+};
+
 const reserveRooms = async (req, res, next) => {
   const session = req.bookingSession;
-
   try {
     for (const roomInfo of req.body.roomInfo) {
       const roomId = new mongoose.Types.ObjectId(roomInfo.roomId);
@@ -210,9 +251,13 @@ const reserveRooms = async (req, res, next) => {
             _id: roomId,
             propertyId: new mongoose.Types.ObjectId(req.body.propertyId),
             isLocked: false,
+            lockUntill: null,
           },
           {
-            $set: { isLocked: true },
+            $set: {
+              isLocked: true,
+              lockUntill: new Date(req.reserveUntill),
+            },
           }
         )
         .session(session);
@@ -350,23 +395,13 @@ const finalizeBooking = async (req, res, next) => {
 const finalizeOrderId = async (req, res, next) => {
   const session = req.bookingSession;
   try {
-    //create the orderid here.
-    const order = await razorpayInstance.orders.create({
-      amount: req.body.amount,
-      currency: req.body.currency,
-      receipt: `receipt_${new Date().getTime()}`,
-    });
     // Once all other updates are done, commit the transaction
     await session.commitTransaction();
     res.json({
       status: true,
       bcc: 201,
       message: "orderId created successfully.",
-      data: {
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-      },
+      data: req.session.checkOut || {},
     });
   } catch (error) {
     console.error("finalizeBooking", error);
@@ -400,6 +435,7 @@ const testing = async (req, res, next) => {
 const bookingInfo = {
   transactionMiddleware,
   checkRoomAvailability,
+  createOrderId,
   reserveRooms,
   createBooking,
   updateRooms,
