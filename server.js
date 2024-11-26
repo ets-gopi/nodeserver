@@ -6,6 +6,7 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const routes = require("./routes");
 const connectDB = require("./config/db.config");
+require("./config/node.corn");
 connectDB();
 
 const app = express();

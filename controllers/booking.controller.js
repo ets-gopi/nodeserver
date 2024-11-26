@@ -3,8 +3,14 @@ const razorpayInstance = require("../config/razorpay.config");
 const { bookingModel, mongoose } = require("../models/booking.model");
 const { roomModel } = require("../models/room.model");
 const { userModel } = require("../models/user.model");
+const crypto = require("crypto");
+
 const { HttpError, createError } = require("../utils/customError");
 const { delay } = require("../utils/delay");
+const {
+  isUserSessionData,
+  updateUserSessionData,
+} = require("../utils/session.helper");
 
 const handleErrorResponse = (error, res) => {
   if (error instanceof HttpError) {
@@ -167,19 +173,23 @@ const checkRoomAvailability = async (req, res, next) => {
             {
               _id: new mongoose.Types.ObjectId(inputroominfo.roomId),
               propertyId: new mongoose.Types.ObjectId(req.body.propertyId),
+              isLocked: false,
             },
             {
               quantityAvailable: 1,
             }
           )
           .session(session);
-        if (inputroominfo.roomQuantity > roomDoc.quantityAvailable) {
+        if (
+          roomDoc === null ||
+          inputroominfo.roomQuantity > roomDoc.quantityAvailable
+        ) {
           (availabilityCheck = false),
             unavailableRooms.push({
               roomId: inputroominfo.roomId,
               roomName: inputroominfo.roomName,
               requested: inputroominfo.roomQuantity,
-              available: roomDoc.quantityAvailable,
+              available: roomDoc?.quantityAvailable || 0,
             });
         }
       }
@@ -201,13 +211,13 @@ const checkRoomAvailability = async (req, res, next) => {
 const createOrderId = async (req, res, next) => {
   const session = req.bookingSession;
   try {
+    const isUserExist = await userModel.findById(req.payload.id);
+    if (!isUserExist) {
+      throw createError("user does not found", 404);
+    }
+    const isSessionExit = await isUserSessionData(req.payload.id);
     // add the checkout key to the req.session
-    if (
-      !req.session ||
-      !req.session.userSearchDetails ||
-      !req.session.cartInfo ||
-      !req.session.guestDetails
-    ) {
+    if (!isSessionExit) {
       throw createError("user session data not found", 404);
     }
 
@@ -218,20 +228,46 @@ const createOrderId = async (req, res, next) => {
       receipt: `receipt_${new Date().getTime()}`,
     });
 
-    req.session.checkOut = {
+    // req.session.checkOut = {
+    //   orderId: order.id,
+    //   amount: order.amount,
+    //   currency: order.currency,
+    //   createdAt: new Date(order.created_at * 1000),
+    //   expiresAt: new Date(order.created_at * 1000 + 15 * 60 * 1000),
+    //   paymentStatus: "Pending",
+    // };
+    // req.session.save((err) => {
+    //   if (err) {
+    //     throw createError("Failed to save user session", 500);
+    //   }
+    // });
+    const checkOutData = {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
       createdAt: new Date(order.created_at * 1000),
-      expiresAt: new Date(order.created_at * 1000 + 15 * 60 * 1000),
+      expiresAt: new Date(order.created_at * 1000 + 10 * 60 * 1000),
       paymentStatus: "Pending",
     };
-    req.session.save((err) => {
-      if (err) {
-        throw createError("Failed to save user session", 500);
-      }
+    await updateUserSessionData(isUserExist._id.toString(), {
+      checkOut: checkOutData,
+      userSearchDetails: {
+        ...isSessionExit?.userSearchDetails,
+        nights: req.body.nights,
+        totalRooms: req.body.totalRooms,
+      },
+      billingInfo: req.body.billingInfo,
     });
     req.reserveUntill = order.created_at * 1000 + 15 * 60 * 1000;
+    req.OrderData = {
+      checkOut: checkOutData,
+      userSearchDetails: {
+        ...isSessionExit?.userSearchDetails,
+        nights: req.body.nights,
+        totalRooms: req.body.totalRooms,
+      },
+      billingInfo: req.body.billingInfo,
+    };
     next();
   } catch (error) {
     console.error("orderId", error);
@@ -251,7 +287,6 @@ const reserveRooms = async (req, res, next) => {
             _id: roomId,
             propertyId: new mongoose.Types.ObjectId(req.body.propertyId),
             isLocked: false,
-            lockUntill: null,
           },
           {
             $set: {
@@ -279,25 +314,75 @@ const reserveRooms = async (req, res, next) => {
   }
 };
 
-const createBooking = async (req, res, next) => {
+const finalizeOrderId = async (req, res, next) => {
   const session = req.bookingSession;
   try {
-    // create booking if room are available.
-    const booking = new bookingModel({ ...req.body });
+    // Once all other updates are done, commit the transaction
+    await session.commitTransaction();
+    res.json({
+      status: true,
+      bcc: 201,
+      message: "orderId created successfully.",
+      data: req.OrderData,
+    });
+  } catch (error) {
+    console.error("finalizeBooking", error);
+    await session.abortTransaction();
+    handleErrorResponse(error, res);
+  } finally {
+    await session.endSession();
+  }
+};
 
-    await booking.save({ session: session });
+const verifyPaymentStatus = async (req, res, next) => {
+  const finsession = req.bookingSession;
+  try {
+    const data = `${req.body.orderId}|${req.body.billingInfo.razorpayPaymentId}`;
+    // create a signature based on orderid and paymentid.
+    const signature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_SCERET_ID)
+      .update(data)
+      .digest("hex");
+    const paymentStatus = await razorpayInstance.payments.fetch(
+      req.body.billingInfo.razorpayPaymentId
+    );
+    if (
+      signature === req.body.billingInfo.razorpaySignature &&
+      paymentStatus.status !== "captured"
+    ) {
+      throw createError("Payment verification failed", 400);
+    }
+    next();
+  } catch (error) {
+    console.error("verifyPaymentStatus", error);
+    await finsession.abortTransaction();
+    await finsession.endSession();
+    handleErrorResponse(error, res);
+  }
+};
+
+const createBooking = async (req, res, next) => {
+  const finsession = req.bookingSession;
+  try {
+    // create booking if room are available.
+    const booking = new bookingModel({
+      ...req.body,
+      bookingStatus: "Confirmed",
+    });
+
+    await booking.save({ session: finsession });
     req.bookingDetails = booking.toObject();
     next();
   } catch (error) {
     console.error("createBooking", error);
-    await session.abortTransaction();
-    await session.endSession();
+    await finsession.abortTransaction();
+    await finsession.endSession();
     handleErrorResponse(error, res);
   }
 };
 
 const updateRooms = async (req, res, next) => {
-  const session = req.bookingSession;
+  const finsession = req.bookingSession;
 
   try {
     const { checkIn, checkOut, bookingStatus, bookingId } = req.bookingDetails;
@@ -307,6 +392,7 @@ const updateRooms = async (req, res, next) => {
         {
           _id: new mongoose.Types.ObjectId(inputroominfo.roomId),
           propertyId: new mongoose.Types.ObjectId(req.body.propertyId),
+          isLocked: true,
         },
         {
           $push: {
@@ -320,10 +406,11 @@ const updateRooms = async (req, res, next) => {
           },
           $set: {
             isLocked: false,
+            lockUntill: new Date(),
           },
         },
         {
-          session: session,
+          session: finsession,
           new: true,
         }
       );
@@ -338,14 +425,14 @@ const updateRooms = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("updateRooms", error);
-    await session.abortTransaction();
-    await session.endSession();
+    await finsession.abortTransaction();
+    await finsession.endSession();
     handleErrorResponse(error, res);
   }
 };
 
 const updateUserInfo = async (req, res, next) => {
-  const session = req.bookingSession;
+  const finsession = req.bookingSession;
   try {
     const user = await userModel.findOneAndUpdate(
       {
@@ -357,7 +444,7 @@ const updateUserInfo = async (req, res, next) => {
         },
       },
       {
-        session: session,
+        session: finsession,
         new: true,
       }
     );
@@ -367,48 +454,80 @@ const updateUserInfo = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("updateUserInfo", error);
-    await session.abortTransaction();
-    await session.endSession();
+    await finsession.abortTransaction();
+    await finsession.endSession();
     handleErrorResponse(error, res);
   }
 };
 
 const finalizeBooking = async (req, res, next) => {
-  const session = req.bookingSession;
+  const finsession = req.bookingSession;
   try {
-    // Once all other updates are done, commit the transaction
-    await session.commitTransaction();
-    res.json({
-      status: true,
-      bcc: 201,
-      message: "Booking Created Successfully.",
+    console.log("Committing transaction...");
+    await finsession.commitTransaction();
+    console.log("Destroying session...");
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destroy error:", err);
+        return res.status(500).json({
+          code: "INTERNAL_SERVER_ERROR",
+          status: false,
+          message: "SOMETHING WENT WRONG.",
+        });
+      }
+      console.log("Session destroyed successfully.");
+      res.clearCookie("session_id");
+      res.json({
+        status: true,
+        bcc: 201,
+        message: "Booking Created Successfully.",
+      });
     });
   } catch (error) {
-    console.error("finalizeBooking", error);
-    await session.abortTransaction();
+    console.error("Error in finalizeBooking:", error);
+    await finsession.abortTransaction();
     handleErrorResponse(error, res);
   } finally {
-    await session.endSession();
+    console.log("Ending session...");
+    await finsession.endSession();
   }
 };
 
-const finalizeOrderId = async (req, res, next) => {
-  const session = req.bookingSession;
+const updateRoomsAfterExpiry = async (req, res, next) => {
+  const { roomInfo } = req.body;
   try {
-    // Once all other updates are done, commit the transaction
-    await session.commitTransaction();
+    for (const inputroominfo of roomInfo) {
+      // find the room based on the propertyId and room Id.
+      const roomUpdateDoc = await roomModel.findOneAndUpdate(
+        {
+          _id: new mongoose.Types.ObjectId(inputroominfo.roomId),
+          propertyId: new mongoose.Types.ObjectId(req.params.propertyId),
+        },
+        {
+          $set: {
+            isLocked: false,
+            lockUntill: new Date(),
+          },
+        },
+        {
+          new: true,
+        }
+      );
+      if (!roomUpdateDoc) {
+        throw createError(
+          `Room with ID ${inputroominfo.roomId} not found`,
+          404
+        );
+      }
+    }
     res.json({
       status: true,
-      bcc: 201,
-      message: "orderId created successfully.",
-      data: req.session.checkOut || {},
+      bcc: 200,
+      message: "Ok",
     });
   } catch (error) {
-    console.error("finalizeBooking", error);
-    await session.abortTransaction();
+    console.error("updateRooms", error);
     handleErrorResponse(error, res);
-  } finally {
-    await session.endSession();
   }
 };
 
@@ -437,11 +556,13 @@ const bookingInfo = {
   checkRoomAvailability,
   createOrderId,
   reserveRooms,
+  finalizeOrderId,
+  verifyPaymentStatus,
   createBooking,
   updateRooms,
   updateUserInfo,
   finalizeBooking,
-  finalizeOrderId,
+  updateRoomsAfterExpiry,
   testing,
 };
 module.exports = bookingInfo;

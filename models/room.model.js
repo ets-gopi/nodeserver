@@ -49,6 +49,7 @@ const roomSchema = new Schema(
     bookings: {
       type: [
         {
+          _id: false,
           checkIn: {
             type: Date,
             required: true,
@@ -78,6 +79,10 @@ const roomSchema = new Schema(
     isLocked: {
       type: Boolean,
       default: false,
+    },
+    lockUntill: {
+      type: Date,
+      default: new Date(),
     },
   },
   {

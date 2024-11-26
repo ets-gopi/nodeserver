@@ -20,6 +20,9 @@ const bookingSchema = new Schema(
       type: Number,
       unique: true,
     },
+    orderId: {
+      type: String,
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -49,6 +52,7 @@ const bookingSchema = new Schema(
     roomInfo: {
       type: [
         {
+          _id: false,
           roomId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Room",
@@ -86,6 +90,15 @@ const bookingSchema = new Schema(
           type: String,
           enum: ["Paid", "Pending"],
           default: "Pending",
+        },
+        razorpayPaymentId: {
+          type: String,
+        },
+        razorpayOrderId: {
+          type: String,
+        },
+        razorpaySignature: {
+          type: String,
         },
       },
       _id: false,

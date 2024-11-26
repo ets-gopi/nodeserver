@@ -24,12 +24,17 @@ router.post(
   verifyAccessToken,
   bookingValidation,
   bookingInfo.transactionMiddleware,
-  bookingInfo.checkRoomAvailability,
-  bookingInfo.reserveRooms,
+  bookingInfo.verifyPaymentStatus,
   bookingInfo.createBooking,
   bookingInfo.updateRooms,
   bookingInfo.updateUserInfo,
   bookingInfo.finalizeBooking
+);
+
+router.put(
+  "/property/:propertyId/update-rooms-after-expxiry",
+  verifyAccessToken,
+  bookingInfo.updateRoomsAfterExpiry
 );
 router.get("/booking-testing", bookingInfo.testing);
 module.exports = router;

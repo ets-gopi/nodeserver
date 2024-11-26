@@ -1,38 +1,48 @@
 const mongoose = require("mongoose");
 
 const isUserSessionData = async (userId) => {
-  //console.log(userId);
-  
-  let isSessionDataFound = false,
-    sessionData = null;
-  const sessiondocs = await mongoose.connection
+  let sessionData = null;
+  const sessiondoc = await mongoose.connection
     .useDb(process.env.DB_NAME)
     .collection(process.env.SESSION_COLLECTION_NAME)
-    .find({})
-    .toArray();
-  if (sessiondocs.length > 0) {
-    for (const session of sessiondocs) {
-      //console.log(session);
-
-      const data = JSON.parse(session.session);
-      if (data.userId === userId) {
-        isSessionDataFound = true;
-        sessionData = { sessionId: session._id, ...data };
-        break;
-      }
-    }
+    .findOne({
+      session: { $regex: `"userId":"${userId}"` },
+    });
+  if (sessiondoc) {
+    sessionData = JSON.parse(sessiondoc.session);
   }
-  //console.log(isSessionDataFound, sessionData);
+  return sessiondoc ? sessionData : null;
+};
 
-  if (isSessionDataFound && sessionData) {
-    return sessionData;
-  } else {
-    return null;
+const updateUserSessionData = async (userId, obj) => {
+  try {
+    const db = mongoose.connection.useDb(process.env.DB_NAME);
+    const collection = db.collection(process.env.SESSION_COLLECTION_NAME);
+
+    // Find the session document
+    const sessionDoc = await collection.findOne({
+      session: { $regex: `"userId":"${userId}"` },
+    });
+
+    if (!sessionDoc) {
+      console.log("No session document found for the given userId.");
+      return;
+    }
+
+    // Parse and modify the session data
+    let sessionData = JSON.parse(sessionDoc.session);
+    sessionData = { ...sessionData, ...obj };
+
+    // Update the session document
+    await collection.updateOne(
+      { _id: sessionDoc._id }, // Query by the document's _id
+      { $set: { session: JSON.stringify(sessionData) } } // Update the session field
+    );
+
+    console.log("Session updated successfully.");
+  } catch (error) {
+    console.error("Error updating user session data:", error);
   }
 };
 
-const updateUserSessionData=async(userId)=>{
-
-}
-
-module.exports = { isUserSessionData };
+module.exports = { isUserSessionData, updateUserSessionData };

@@ -234,6 +234,11 @@ const bookingSchema = {
     required: true,
     trim: true,
   },
+  orderId: {
+    type: "string",
+    required: true,
+    trim: true,
+  },
   checkIn: {
     type: "date",
     required: true,
@@ -308,6 +313,18 @@ const bookingSchema = {
         type: "number",
         required: true,
       },
+      razorpayPaymentId: {
+        type: "string",
+        required: true,
+      },
+      razorpayOrderId: {
+        type: "string",
+        required: true,
+      },
+      razorpaySignature: {
+        type: "string",
+        required: true,
+      },
     },
     required: true,
   },
@@ -358,6 +375,14 @@ const createOrderIdDataSchema = {
     type: "date",
     required: true,
   },
+  totalRooms: {
+    type: "number",
+    required: true,
+  },
+  nights: {
+    type: "number",
+    required: true,
+  },
   roomInfo: {
     type: [
       {
@@ -396,6 +421,29 @@ const createOrderIdDataSchema = {
     required: true,
     minLength: 3,
   },
+  billingInfo: {
+    type: {
+      totalAmount: {
+        type: "number",
+        required: true,
+      },
+      discount: { type: "number" },
+      gstInfo: {
+        type: {
+          rate: { type: "number", required: true },
+          amount: { type: "number", required: true },
+          sgst: { type: "number", required: true },
+          cgst: { type: "number", required: true },
+        },
+        required: true,
+      },
+      payableAmount: {
+        type: "number",
+        required: true,
+      },
+    },
+    required: true,
+  },
 };
 module.exports = {
   userRegisterSchema,
@@ -404,5 +452,5 @@ module.exports = {
   roomSchema,
   bookingSchema,
   searchRoomsSchema,
-  createOrderIdDataSchema
+  createOrderIdDataSchema,
 };

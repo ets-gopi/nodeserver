@@ -2,7 +2,10 @@ const { userModel, mongoose } = require("../models/user.model");
 const { HttpError, createError } = require("../utils/customError");
 const { countdownFormat } = require("../utils/formatDate");
 const { signAccessToken } = require("../utils/jwt.tokens");
-const { isUserSessionData } = require("../utils/session.helper");
+const {
+  isUserSessionData,
+  updateUserSessionData,
+} = require("../utils/session.helper");
 
 const register = async (req, res, next) => {
   const { email } = req.body;
@@ -49,7 +52,7 @@ const login = async (req, res, next) => {
     }
     const token = await signAccessToken(isExist._id);
     const isSessionExit = await isUserSessionData(isExist._id.toString());
-    console.log("isSessionExit", isSessionExit);
+    //console.log("isSessionExit", isSessionExit);
     if (!isSessionExit) {
       //create the session.
       req.session.userId = isExist._id.toString();
@@ -62,7 +65,6 @@ const login = async (req, res, next) => {
         bcc: 200,
         message: "Ok",
         accessToken: token,
-        sessionId: req.sessionID,
       });
     } else {
       res.json({
@@ -70,7 +72,6 @@ const login = async (req, res, next) => {
         bcc: 200,
         message: "Ok",
         accessToken: token,
-        sessionId: isSessionExit.sessionId,
       });
     }
   } catch (error) {
@@ -137,24 +138,41 @@ const getUserDetails = async (req, res, next) => {
 const manipulateUserSessionData = async (req, res, next) => {
   const { userSearchDetails, cartInfo, count } = req.body;
   try {
-    if (!req.session.guestDetails) {
-      const userdoc = await userModel.findById(req.payload.id, {
-        username: 1,
-        email: 1,
-      });
-      req.session.userId = req.payload.id;
+    const userdoc = await userModel.findById(req.payload.id, {
+      username: 1,
+      email: 1,
+    });
+    if (!userdoc) {
+      throw createError("user does not found", 404);
+    }
+    const isSessionExit = await isUserSessionData(userdoc._id.toString());
+    //console.log("isSessionExit", isSessionExit);
+    if (!isSessionExit) {
+      req.session.userId = userdoc._id.toString();
       req.session.guestDetails = {
         name: userdoc.username,
         email: userdoc.email,
       };
-    }
-    if (userSearchDetails) {
-      req.session.userSearchDetails = userSearchDetails;
-    }
-    if (cartInfo) {
-      // console.log("cartInfo", cartInfo);
-      req.session.cartInfo = cartInfo;
-      req.session.count = count;
+      if (userSearchDetails) {
+        req.session.userSearchDetails = userSearchDetails;
+      }
+      if (cartInfo) {
+        req.session.cartInfo = cartInfo;
+        req.session.count = count;
+      }
+    } else {
+      if (userSearchDetails) {
+        await updateUserSessionData(userdoc._id.toString(), {
+          userSearchDetails: userSearchDetails,
+        });
+      }
+      if (cartInfo) {
+        // console.log("cartInfo", cartInfo);
+        await updateUserSessionData(userdoc._id.toString(), {
+          cartInfo: cartInfo,
+          count: count,
+        });
+      }
     }
 
     res.json({
@@ -193,22 +211,34 @@ const getUserSessionData = async (req, res, next) => {
 
   try {
     const isUserExist = await userModel.findById(req.payload.id);
-    const sessionData = await isUserSessionData(req.payload.id);
-    if (sessionData) {
+    if (!isUserExist) {
+      throw createError("user does not found", 404);
+    }
+    const isSessionExit = await isUserSessionData(req.payload.id);
+    //console.log("iss",isSessionExit);
+
+    if (isSessionExit) {
       res.json({
         status: true,
         bcc: 200,
         message: "feteched session data successfully.",
         data: {
-          userSearchDetails: sessionData?.userSearchDetails || {
+          userSearchDetails: isSessionExit?.userSearchDetails || {
             checkIn: countdownFormat(new Date()),
             checkOut: countdownFormat(currentDatePlusOneDay),
             totalGuests: 2,
             propertyId: null,
+            propertyName: null,
+            propertyLocation: null,
+            propertyImage: null,
+            nights: null,
+            totalRooms: null,
           },
-          guestDetails: sessionData?.guestDetails || {},
-          cartInfo: sessionData?.cartInfo || [],
-          count: sessionData.count || 0,
+          guestDetails: isSessionExit?.guestDetails || {},
+          cartInfo: isSessionExit?.cartInfo || [],
+          count: isSessionExit.count || 0,
+          checkOut: isSessionExit?.checkOut || {},
+          billingInfo: isSessionExit?.billingInfo || {},
         },
       });
     } else {
@@ -222,6 +252,11 @@ const getUserSessionData = async (req, res, next) => {
             checkOut: countdownFormat(currentDatePlusOneDay),
             totalGuests: 2,
             propertyId: null,
+            propertyName: null,
+            propertyLocation: null,
+            propertyImage: null,
+            nights: null,
+            totalRooms: null,
           },
           guestDetails: {
             name: isUserExist?.username,
@@ -229,6 +264,8 @@ const getUserSessionData = async (req, res, next) => {
           },
           cartInfo: [],
           count: 0,
+          checkOut: {},
+          billingInfo: {},
         },
       });
     }
@@ -268,7 +305,7 @@ const logout = async (req, res, next) => {
       });
     }
     res.clearCookie("session_id");
-    res.json({ code: "OK", status: true, message: "Logout successful" });
+    res.json({ bcc: 200, status: true, message: "Logout successful" });
   });
 };
 
