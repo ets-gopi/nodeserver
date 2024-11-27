@@ -479,7 +479,6 @@ const searchRoomsByPropertyId = async (req, res, next) => {
         },
       },
     ]);
-
     res.json({
       status: true,
       bcc: 200,

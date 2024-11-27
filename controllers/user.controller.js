@@ -51,7 +51,7 @@ const login = async (req, res, next) => {
       throw createError(`InValid Credentails.`, 401);
     }
     const token = await signAccessToken(isExist._id);
-    const isSessionExit = await isUserSessionData(isExist._id.toString());
+    const isSessionExit = await isUserSessionData(req.sessionID);
     //console.log("isSessionExit", isSessionExit);
     if (!isSessionExit) {
       //create the session.
@@ -145,7 +145,7 @@ const manipulateUserSessionData = async (req, res, next) => {
     if (!userdoc) {
       throw createError("user does not found", 404);
     }
-    const isSessionExit = await isUserSessionData(userdoc._id.toString());
+    const isSessionExit = await isUserSessionData(req.sessionID);
     //console.log("isSessionExit", isSessionExit);
     if (!isSessionExit) {
       req.session.userId = userdoc._id.toString();
@@ -162,13 +162,13 @@ const manipulateUserSessionData = async (req, res, next) => {
       }
     } else {
       if (userSearchDetails) {
-        await updateUserSessionData(userdoc._id.toString(), {
+        await updateUserSessionData(req.sessionID, {
           userSearchDetails: userSearchDetails,
         });
       }
       if (cartInfo) {
         // console.log("cartInfo", cartInfo);
-        await updateUserSessionData(userdoc._id.toString(), {
+        await updateUserSessionData(req.sessionID, {
           cartInfo: cartInfo,
           count: count,
         });
@@ -214,7 +214,7 @@ const getUserSessionData = async (req, res, next) => {
     if (!isUserExist) {
       throw createError("user does not found", 404);
     }
-    const isSessionExit = await isUserSessionData(req.payload.id);
+    const isSessionExit = await isUserSessionData(req.sessionID);
     //console.log("iss",isSessionExit);
 
     if (isSessionExit) {

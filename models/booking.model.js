@@ -88,7 +88,7 @@ const bookingSchema = new Schema(
         payableAmount: { type: Number },
         paymentStatus: {
           type: String,
-          enum: ["Paid", "Pending"],
+          enum: ["Paid", "Pending", "Failed"],
           default: "Pending",
         },
         razorpayPaymentId: {
@@ -98,6 +98,9 @@ const bookingSchema = new Schema(
           type: String,
         },
         razorpaySignature: {
+          type: String,
+        },
+        paymentMethod: {
           type: String,
         },
       },

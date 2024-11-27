@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 
-const isUserSessionData = async (userId) => {
+const isUserSessionData = async (sessionId) => {
   let sessionData = null;
   const sessiondoc = await mongoose.connection
     .useDb(process.env.DB_NAME)
     .collection(process.env.SESSION_COLLECTION_NAME)
     .findOne({
-      session: { $regex: `"userId":"${userId}"` },
+      _id: sessionId,
     });
   if (sessiondoc) {
     sessionData = JSON.parse(sessiondoc.session);
@@ -14,14 +14,14 @@ const isUserSessionData = async (userId) => {
   return sessiondoc ? sessionData : null;
 };
 
-const updateUserSessionData = async (userId, obj) => {
+const updateUserSessionData = async (sessionId,obj) => {
   try {
     const db = mongoose.connection.useDb(process.env.DB_NAME);
     const collection = db.collection(process.env.SESSION_COLLECTION_NAME);
 
     // Find the session document
     const sessionDoc = await collection.findOne({
-      session: { $regex: `"userId":"${userId}"` },
+      _id: sessionId,
     });
 
     if (!sessionDoc) {

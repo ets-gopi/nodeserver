@@ -12,6 +12,7 @@ const {
   updateUserSessionData,
 } = require("../utils/session.helper");
 
+// error handling for entire booking process.
 const handleErrorResponse = (error, res) => {
   if (error instanceof HttpError) {
     res.json({
@@ -54,6 +55,7 @@ const transactionMiddleware = async (req, res, next) => {
   next();
 };
 
+// for creating the orderId and customer is ready to pay.
 const checkRoomAvailability = async (req, res, next) => {
   const incomingRoomIds = req.body.roomInfo.map(
     (room) => new mongoose.Types.ObjectId(room.roomId)
@@ -215,7 +217,7 @@ const createOrderId = async (req, res, next) => {
     if (!isUserExist) {
       throw createError("user does not found", 404);
     }
-    const isSessionExit = await isUserSessionData(req.payload.id);
+    const isSessionExit = await isUserSessionData(req.sessionID);
     // add the checkout key to the req.session
     if (!isSessionExit) {
       throw createError("user session data not found", 404);
@@ -249,7 +251,7 @@ const createOrderId = async (req, res, next) => {
       expiresAt: new Date(order.created_at * 1000 + 10 * 60 * 1000),
       paymentStatus: "Pending",
     };
-    await updateUserSessionData(isUserExist._id.toString(), {
+    await updateUserSessionData(req.sessionID, {
       checkOut: checkOutData,
       userSearchDetails: {
         ...isSessionExit?.userSearchDetails,
@@ -334,6 +336,7 @@ const finalizeOrderId = async (req, res, next) => {
   }
 };
 
+// when payment is success and allow booking creation.
 const verifyPaymentStatus = async (req, res, next) => {
   const finsession = req.bookingSession;
   try {
@@ -352,6 +355,7 @@ const verifyPaymentStatus = async (req, res, next) => {
     ) {
       throw createError("Payment verification failed", 400);
     }
+    req.paymentInfo = paymentStatus;
     next();
   } catch (error) {
     console.error("verifyPaymentStatus", error);
@@ -368,6 +372,10 @@ const createBooking = async (req, res, next) => {
     const booking = new bookingModel({
       ...req.body,
       bookingStatus: "Confirmed",
+      billingInfo: {
+        ...req.body.billingInfo,
+        paymentMethod: req.paymentInfo.method,
+      },
     });
 
     await booking.save({ session: finsession });
@@ -493,6 +501,7 @@ const finalizeBooking = async (req, res, next) => {
   }
 };
 
+// when Rooms Lock Expiry and destory the session for his selection.
 const updateRoomsAfterExpiry = async (req, res, next) => {
   const { roomInfo } = req.body;
   try {
@@ -520,14 +529,84 @@ const updateRoomsAfterExpiry = async (req, res, next) => {
         );
       }
     }
-    res.json({
-      status: true,
-      bcc: 200,
-      message: "Ok",
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destroy error:", err);
+        return res.status(500).json({
+          code: "INTERNAL_SERVER_ERROR",
+          status: false,
+          message: "SOMETHING WENT WRONG.",
+        });
+      }
+      console.log("Session destroyed successfully.");
+      res.clearCookie("session_id");
+      res.json({
+        status: true,
+        bcc: 200,
+        message: "Ok",
+      });
     });
   } catch (error) {
     console.error("updateRooms", error);
     handleErrorResponse(error, res);
+  }
+};
+
+// when payment is failed.
+const createFailedBooking = async (req, res, next) => {
+  const finsession = req.bookingSession;
+  try {
+    // create booking if room are available.
+    const booking = new bookingModel({
+      ...req.body,
+      bookingStatus: "Cancelled",
+      billingInfo: {
+        ...req.body.billingInfo,
+        paymentMethod: "null",
+      },
+    });
+
+    await booking.save({ session: finsession });
+    req.bookingDetails = booking.toObject();
+    next();
+  } catch (error) {
+    console.error("createFailedBooking", error);
+    await finsession.abortTransaction();
+    await finsession.endSession();
+    handleErrorResponse(error, res);
+  }
+};
+
+const finalizeFailedBooking = async (req, res, next) => {
+  const finsession = req.bookingSession;
+  try {
+    console.log("Committing transaction...");
+    await finsession.commitTransaction();
+    console.log("Destroying session...");
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destroy error:", err);
+        return res.status(500).json({
+          code: "INTERNAL_SERVER_ERROR",
+          status: false,
+          message: "SOMETHING WENT WRONG.",
+        });
+      }
+      console.log("Session destroyed successfully.");
+      res.clearCookie("session_id");
+      res.json({
+        status: true,
+        bcc: 200,
+        message: "Ok.",
+      });
+    });
+  } catch (error) {
+    console.error("Error in finalizeFailedBooking:", error);
+    await finsession.abortTransaction();
+    handleErrorResponse(error, res);
+  } finally {
+    console.log("Ending session...");
+    await finsession.endSession();
   }
 };
 
@@ -559,9 +638,11 @@ const bookingInfo = {
   finalizeOrderId,
   verifyPaymentStatus,
   createBooking,
+  createFailedBooking,
   updateRooms,
   updateUserInfo,
   finalizeBooking,
+  finalizeFailedBooking,
   updateRoomsAfterExpiry,
   testing,
 };

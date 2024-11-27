@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
+const crypto = require("crypto");
 const routes = require("./routes");
 const connectDB = require("./config/db.config");
 require("./config/node.corn");
@@ -35,6 +36,11 @@ app.use(
       secure: false,
       httpOnly: true,
       maxAge: 7200000,
+    },
+    genid: () => {
+      return `session-${new Date().getTime()}-${crypto
+        .randomBytes(16)
+        .toString("hex")}`;
     },
   })
 );
