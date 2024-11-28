@@ -11,6 +11,7 @@ const {
   isUserSessionData,
   updateUserSessionData,
 } = require("../utils/session.helper");
+const { orderModel } = require("../models/order.model");
 
 // error handling for entire booking process.
 const handleErrorResponse = (error, res) => {
@@ -27,7 +28,10 @@ const handleErrorResponse = (error, res) => {
       bcc: 400,
       message: error.message,
     });
-  } else if (error?.hasErrorLabel("TransientTransactionError")) {
+  } else if (
+    typeof error?.hasErrorLabel === "function" &&
+    error.hasErrorLabel("TransientTransactionError")
+  ) {
     res.json({
       status: false,
       bcc: 503,
@@ -230,50 +234,35 @@ const createOrderId = async (req, res, next) => {
       receipt: `receipt_${new Date().getTime()}`,
     });
 
-    // req.session.checkOut = {
-    //   orderId: order.id,
-    //   amount: order.amount,
-    //   currency: order.currency,
-    //   createdAt: new Date(order.created_at * 1000),
-    //   expiresAt: new Date(order.created_at * 1000 + 15 * 60 * 1000),
-    //   paymentStatus: "Pending",
-    // };
-    // req.session.save((err) => {
-    //   if (err) {
-    //     throw createError("Failed to save user session", 500);
-    //   }
-    // });
     const checkOutData = {
+      propertyId: req.body.propertyId,
+      userId: req.payload.id,
       orderId: order.id,
+      checkIn: req.body.checkIn,
+      checkOut: req.body.checkOut,
+      roomInfo: req.body.roomInfo,
+      totalGuests: req.body.totalGuests,
+      nights: req.body.nights,
+      totalRooms: req.body.totalRooms,
       amount: order.amount,
       currency: order.currency,
-      createdAt: new Date(order.created_at * 1000),
-      expiresAt: new Date(order.created_at * 1000 + 10 * 60 * 1000),
-      paymentStatus: "Pending",
+      orderCreatedAt: new Date(order.created_at * 1000),
+      orderExpiresAt: new Date(order.created_at * 1000 + 10 * 60 * 1000),
+      billingInfo: req.body.billingInfo,
+      orderStatus: order.status,
     };
-    await updateUserSessionData(req.sessionID, {
-      checkOut: checkOutData,
-      userSearchDetails: {
-        ...isSessionExit?.userSearchDetails,
-        nights: req.body.nights,
-        totalRooms: req.body.totalRooms,
-      },
-      billingInfo: req.body.billingInfo,
-    });
-    req.reserveUntill = order.created_at * 1000 + 15 * 60 * 1000;
+
+    const orderdoc = new orderModel(checkOutData);
+    await orderdoc.save({ session: session });
+    req.reserveUntill = order.created_at * 1000 + 10 * 60 * 1000;
     req.OrderData = {
-      checkOut: checkOutData,
-      userSearchDetails: {
-        ...isSessionExit?.userSearchDetails,
-        nights: req.body.nights,
-        totalRooms: req.body.totalRooms,
-      },
-      billingInfo: req.body.billingInfo,
+      orderId: order.id,
     };
     next();
   } catch (error) {
     console.error("orderId", error);
     await session.abortTransaction();
+    await session.endSession();
     handleErrorResponse(error, res);
   }
 };
@@ -473,23 +462,10 @@ const finalizeBooking = async (req, res, next) => {
   try {
     console.log("Committing transaction...");
     await finsession.commitTransaction();
-    console.log("Destroying session...");
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("Session destroy error:", err);
-        return res.status(500).json({
-          code: "INTERNAL_SERVER_ERROR",
-          status: false,
-          message: "SOMETHING WENT WRONG.",
-        });
-      }
-      console.log("Session destroyed successfully.");
-      res.clearCookie("session_id");
-      res.json({
-        status: true,
-        bcc: 201,
-        message: "Booking Created Successfully.",
-      });
+    res.json({
+      status: true,
+      bcc: 201,
+      message: "Booking Created Successfully.",
     });
   } catch (error) {
     console.error("Error in finalizeBooking:", error);
@@ -522,6 +498,8 @@ const updateRoomsAfterExpiry = async (req, res, next) => {
           new: true,
         }
       );
+      console.log("roomUpdateDoc", roomUpdateDoc);
+
       if (!roomUpdateDoc) {
         throw createError(
           `Room with ID ${inputroominfo.roomId} not found`,
@@ -529,25 +507,13 @@ const updateRoomsAfterExpiry = async (req, res, next) => {
         );
       }
     }
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("Session destroy error:", err);
-        return res.status(500).json({
-          code: "INTERNAL_SERVER_ERROR",
-          status: false,
-          message: "SOMETHING WENT WRONG.",
-        });
-      }
-      console.log("Session destroyed successfully.");
-      res.clearCookie("session_id");
-      res.json({
-        status: true,
-        bcc: 200,
-        message: "Ok",
-      });
+    res.json({
+      status: true,
+      bcc: 200,
+      message: "Ok",
     });
   } catch (error) {
-    console.error("updateRooms", error);
+    console.error("updateRoomsAfterExpiry", error);
     handleErrorResponse(error, res);
   }
 };
@@ -582,23 +548,10 @@ const finalizeFailedBooking = async (req, res, next) => {
   try {
     console.log("Committing transaction...");
     await finsession.commitTransaction();
-    console.log("Destroying session...");
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("Session destroy error:", err);
-        return res.status(500).json({
-          code: "INTERNAL_SERVER_ERROR",
-          status: false,
-          message: "SOMETHING WENT WRONG.",
-        });
-      }
-      console.log("Session destroyed successfully.");
-      res.clearCookie("session_id");
-      res.json({
-        status: true,
-        bcc: 200,
-        message: "Ok.",
-      });
+    res.json({
+      status: true,
+      bcc: 200,
+      message: "Ok.",
     });
   } catch (error) {
     console.error("Error in finalizeFailedBooking:", error);

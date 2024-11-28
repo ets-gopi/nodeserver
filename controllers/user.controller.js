@@ -228,17 +228,10 @@ const getUserSessionData = async (req, res, next) => {
             checkOut: countdownFormat(currentDatePlusOneDay),
             totalGuests: 2,
             propertyId: null,
-            propertyName: null,
-            propertyLocation: null,
-            propertyImage: null,
-            nights: null,
-            totalRooms: null,
           },
           guestDetails: isSessionExit?.guestDetails || {},
           cartInfo: isSessionExit?.cartInfo || [],
           count: isSessionExit.count || 0,
-          checkOut: isSessionExit?.checkOut || {},
-          billingInfo: isSessionExit?.billingInfo || {},
         },
       });
     } else {
@@ -252,11 +245,6 @@ const getUserSessionData = async (req, res, next) => {
             checkOut: countdownFormat(currentDatePlusOneDay),
             totalGuests: 2,
             propertyId: null,
-            propertyName: null,
-            propertyLocation: null,
-            propertyImage: null,
-            nights: null,
-            totalRooms: null,
           },
           guestDetails: {
             name: isUserExist?.username,
@@ -264,8 +252,6 @@ const getUserSessionData = async (req, res, next) => {
           },
           cartInfo: [],
           count: 0,
-          checkOut: {},
-          billingInfo: {},
         },
       });
     }

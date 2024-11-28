@@ -375,6 +375,10 @@ const createOrderIdDataSchema = {
     type: "date",
     required: true,
   },
+  totalGuests: {
+    type: "number",
+    required: true,
+  },
   totalRooms: {
     type: "number",
     required: true,
