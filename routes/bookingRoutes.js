@@ -31,6 +31,7 @@ router.post(
   bookingInfo.createBooking,
   bookingInfo.updateRooms,
   bookingInfo.updateUserInfo,
+  bookingInfo.updateOrderDetailsById,
   bookingInfo.finalizeBooking
 );
 
@@ -50,6 +51,7 @@ router.post(
   bookingInfo.createFailedBooking,
   bookingInfo.updateRooms,
   bookingInfo.updateUserInfo,
+  bookingInfo.updateFailedOrderDetailsById,
   bookingInfo.finalizeFailedBooking
 );
 

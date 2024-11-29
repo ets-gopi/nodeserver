@@ -6,11 +6,8 @@ const { userModel } = require("../models/user.model");
 const crypto = require("crypto");
 
 const { HttpError, createError } = require("../utils/customError");
-const { delay } = require("../utils/delay");
-const {
-  isUserSessionData,
-  updateUserSessionData,
-} = require("../utils/session.helper");
+
+const { isUserSessionData } = require("../utils/session.helper");
 const { orderModel } = require("../models/order.model");
 
 // error handling for entire booking process.
@@ -456,6 +453,37 @@ const updateUserInfo = async (req, res, next) => {
     handleErrorResponse(error, res);
   }
 };
+const updateOrderDetailsById = async (req, res, next) => {
+  const finsession = req.bookingSession;
+  try {
+    let obj = {
+      orderStatus: "Paid",
+      "billingInfo.paymentStatus": "Paid",
+    };
+    const orderdoc = await orderModel.findOneAndUpdate(
+      {
+        userId: req.payload.id,
+        orderId: req.body.orderId,
+      },
+      {
+        $set: obj,
+      },
+      {
+        new: true,
+        session: finsession,
+      }
+    );
+    if (!orderdoc) {
+      throw createError("orderId does not found.", 404);
+    }
+    next();
+  } catch (error) {
+    console.error("updateOrderDetailsById", error);
+    await finsession.abortTransaction();
+    await finsession.endSession();
+    handleErrorResponse(error, res);
+  }
+};
 
 const finalizeBooking = async (req, res, next) => {
   const finsession = req.bookingSession;
@@ -474,47 +502,6 @@ const finalizeBooking = async (req, res, next) => {
   } finally {
     console.log("Ending session...");
     await finsession.endSession();
-  }
-};
-
-// when Rooms Lock Expiry and destory the session for his selection.
-const updateRoomsAfterExpiry = async (req, res, next) => {
-  const { roomInfo } = req.body;
-  try {
-    for (const inputroominfo of roomInfo) {
-      // find the room based on the propertyId and room Id.
-      const roomUpdateDoc = await roomModel.findOneAndUpdate(
-        {
-          _id: new mongoose.Types.ObjectId(inputroominfo.roomId),
-          propertyId: new mongoose.Types.ObjectId(req.params.propertyId),
-        },
-        {
-          $set: {
-            isLocked: false,
-            lockUntill: new Date(),
-          },
-        },
-        {
-          new: true,
-        }
-      );
-      console.log("roomUpdateDoc", roomUpdateDoc);
-
-      if (!roomUpdateDoc) {
-        throw createError(
-          `Room with ID ${inputroominfo.roomId} not found`,
-          404
-        );
-      }
-    }
-    res.json({
-      status: true,
-      bcc: 200,
-      message: "Ok",
-    });
-  } catch (error) {
-    console.error("updateRoomsAfterExpiry", error);
-    handleErrorResponse(error, res);
   }
 };
 
@@ -543,6 +530,38 @@ const createFailedBooking = async (req, res, next) => {
   }
 };
 
+const updateFailedOrderDetailsById = async (req, res, next) => {
+  const finsession = req.bookingSession;
+  try {
+    let obj = {
+      orderStatus: "Failed",
+      "billingInfo.paymentStatus": "Failed",
+    };
+    const orderdoc = await orderModel.findOneAndUpdate(
+      {
+        userId: req.payload.id,
+        orderId: req.body.orderId,
+      },
+      {
+        $set: obj,
+      },
+      {
+        new: true,
+        session: finsession,
+      }
+    );
+    if (!orderdoc) {
+      throw createError("orderId does not found.", 404);
+    }
+    next();
+  } catch (error) {
+    console.error("updateFailedOrderDetailsById", error);
+    await finsession.abortTransaction();
+    await finsession.endSession();
+    handleErrorResponse(error, res);
+  }
+};
+
 const finalizeFailedBooking = async (req, res, next) => {
   const finsession = req.bookingSession;
   try {
@@ -560,6 +579,65 @@ const finalizeFailedBooking = async (req, res, next) => {
   } finally {
     console.log("Ending session...");
     await finsession.endSession();
+  }
+};
+
+// when Rooms Lock Expiry and destory the session for his selection.
+const updateRoomsAfterExpiry = async (req, res, next) => {
+  const { roomInfo, orderId } = req.body;
+  try {
+    for (const inputroominfo of roomInfo) {
+      // find the room based on the propertyId and room Id.
+      const roomUpdateDoc = await roomModel.findOneAndUpdate(
+        {
+          _id: new mongoose.Types.ObjectId(inputroominfo.roomId),
+          propertyId: new mongoose.Types.ObjectId(req.params.propertyId),
+        },
+        {
+          $set: {
+            isLocked: false,
+            lockUntill: new Date(),
+          },
+        },
+        {
+          new: true,
+        }
+      );
+
+      if (!roomUpdateDoc) {
+        throw createError(
+          `Room with ID ${inputroominfo.roomId} not found`,
+          404
+        );
+      }
+    }
+    let obj = {
+      orderStatus: "expired",
+      "billingInfo.paymentStatus": "",
+    };
+    const orderdoc = await orderModel.findOneAndUpdate(
+      {
+        userId: req.payload.id,
+        orderId: orderId,
+      },
+      {
+        $set: obj,
+      },
+      {
+        new: true,
+      }
+    );
+    if (!orderdoc) {
+      throw createError("orderId does not found.", 404);
+    }
+    res.json({
+      status: true,
+      bcc: 200,
+      message: "Ok",
+    });
+  } catch (error) {
+    console.error("updateRoomsAfterExpiry", error);
+    handleErrorResponse(error, res);
   }
 };
 
@@ -597,6 +675,8 @@ const bookingInfo = {
   finalizeBooking,
   finalizeFailedBooking,
   updateRoomsAfterExpiry,
+  updateOrderDetailsById,
+  updateFailedOrderDetailsById,
   testing,
 };
 module.exports = bookingInfo;
